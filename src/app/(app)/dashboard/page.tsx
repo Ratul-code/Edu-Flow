@@ -1,189 +1,152 @@
 import {
-  BanknoteIcon,
-  BellIcon,
-  BookOpenIcon,
-  CalendarClockIcon,
+  CalendarDaysIcon,
   GraduationCapIcon,
   ReceiptTextIcon,
   UsersRoundIcon,
   WalletCardsIcon,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
-import { PageHeader } from "@/components/app/page-header"
+import { QuickActions } from "@/components/dashboard/quick-actions"
+import { UnpaidStudents } from "@/components/dashboard/unpaid-students"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { requireAdminContext } from "@/lib/auth/user"
+import { listBatches } from "@/lib/data/batches"
 import {
   getStudentFeeSummary,
-  getTeacherSalarySummary,
-  listRecentStudentPayments,
-  listRecentTeacherSalaryPayments,
+  listDashboardDueStudentLedgers,
   listUpcomingSchedules,
   type DashboardSchedule,
-  type RecentStudentPayment,
-  type RecentTeacherPayment,
 } from "@/lib/data/dashboard"
 import { monthStart } from "@/lib/data/fees"
-import { countTenantRecordsByStatus } from "@/lib/data/tenant-records"
+import {
+  countTenantRecordsByStatus,
+  countTenantRecordsCreatedSince,
+} from "@/lib/data/tenant-records"
 
 export default async function DashboardPage() {
   const admin = await requireAdminContext()
   const currentMonth = monthStart()
+  const previousMonth = previousMonthStart(currentMonth)
   const [
     activeStudents,
-    activeTeachers,
     activeBatches,
+    newStudentsThisMonth,
+    newBatchesThisMonth,
     studentFees,
-    teacherSalaries,
+    previousStudentFees,
     upcomingSchedules,
-    recentStudentPayments,
-    recentTeacherPayments,
+    quickBatches,
+    dueLedgers,
   ] = await Promise.all([
     countTenantRecordsByStatus("students", admin.tenantId, "active"),
-    countTenantRecordsByStatus("teachers", admin.tenantId, "active"),
     countTenantRecordsByStatus("batches", admin.tenantId, "active"),
+    countTenantRecordsCreatedSince("students", admin.tenantId, currentMonth),
+    countTenantRecordsCreatedSince("batches", admin.tenantId, currentMonth),
     getStudentFeeSummary(admin.tenantId, currentMonth),
-    getTeacherSalarySummary(admin.tenantId, currentMonth),
+    getStudentFeeSummary(admin.tenantId, previousMonth),
     listUpcomingSchedules(admin.tenantId),
-    listRecentStudentPayments(admin.tenantId),
-    listRecentTeacherSalaryPayments(admin.tenantId),
+    listBatches(admin.tenantId, { status: "active" }),
+    listDashboardDueStudentLedgers(admin.tenantId, currentMonth),
   ])
-  const metrics = [
+  const collectionChange = percentChange(
+    studentFees.paid,
+    previousStudentFees.paid
+  )
+  const topMetrics = [
     {
-      helper: "Currently active",
+      footerLeft: "Active students",
+      footerRight: `+${displayCount(newStudentsThisMonth)} this month`,
       icon: UsersRoundIcon,
-      label: "Active students",
+      label: "Total Students",
+      labelTone: "text-[#3157d8]",
+      tone: "bg-[#eef3ff] text-[#3157d8]",
       value: displayCount(activeStudents),
     },
     {
-      helper: "Currently active",
+      footerLeft: "Active batches",
+      footerRight: `+${displayCount(newBatchesThisMonth)} this month`,
       icon: GraduationCapIcon,
-      label: "Active teachers",
-      value: displayCount(activeTeachers),
-    },
-    {
-      helper: "Currently active",
-      icon: BookOpenIcon,
-      label: "Active batches",
+      label: "Total Batches",
+      labelTone: "text-[#16805a]",
+      tone: "bg-[#edf9f2] text-[#12935f]",
       value: displayCount(activeBatches),
     },
     {
-      helper: "Current month after discounts",
-      icon: ReceiptTextIcon,
-      label: "Monthly expected student fees",
-      value: formatTaka(studentFees.expected),
-    },
-    {
-      helper: "Current month ledger",
-      icon: BanknoteIcon,
-      label: "Monthly collected fees",
+      footerLeft: "Compared to last month",
+      footerRight: formatTrend(collectionChange),
+      icon: WalletCardsIcon,
+      label: "Total Collection (This Month)",
+      labelTone: "text-[#d6991c]",
+      tone: "bg-[#fff7e8] text-[#f59e0b]",
       value: formatTaka(studentFees.paid),
     },
     {
-      helper: "Current month ledger",
-      icon: WalletCardsIcon,
-      label: "Student outstanding dues",
+      footerLeft: `Total ${displayCount(dueLedgers.length)} students`,
+      footerRight: "",
+      icon: ReceiptTextIcon,
+      label: "Due Fee",
+      labelTone: "text-[#d94b4b]",
+      tone: "bg-[#fff0f0] text-[#dc2626]",
       value: formatTaka(studentFees.due),
-    },
-    {
-      helper: "Current month after adjustments",
-      icon: GraduationCapIcon,
-      label: "Teacher expected salaries",
-      value: formatTaka(teacherSalaries.expected),
-    },
-    {
-      helper: "Current month ledger",
-      icon: BanknoteIcon,
-      label: "Teacher salary paid",
-      value: formatTaka(teacherSalaries.paid),
-    },
-    {
-      helper: "Current month ledger",
-      icon: WalletCardsIcon,
-      label: "Teacher salary due",
-      value: formatTaka(teacherSalaries.due),
     },
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        badge={currentMonth.slice(0, 7)}
-        description={`A quick health check for ${admin.tenantName}.`}
-        title="Dashboard"
-      />
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {metrics.map((metric) => (
-          <Card key={metric.label} size="sm">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <CardDescription>{metric.label}</CardDescription>
-                  <CardTitle className="text-2xl">{metric.value}</CardTitle>
-                </div>
-                <metric.icon className="mt-1 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">{metric.helper}</p>
-            </CardContent>
-          </Card>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-semibold tracking-normal">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Welcome back. Here&apos;s what&apos;s happening at your coaching
+            center.
+          </p>
+        </div>
+        <Badge className="h-9 rounded-lg px-3" variant="outline">
+          <CalendarDaysIcon data-icon="inline-start" />
+          {formatMonth(currentMonth)}
+        </Badge>
+      </div>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {topMetrics.map((metric) => (
+          <MetricCard key={metric.label} {...metric} />
         ))}
       </section>
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card>
+
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+        <Card className="min-h-80">
           <CardHeader>
-            <CardTitle>Upcoming classes</CardTitle>
-            <CardDescription>
-              Next weekly schedule rows from active class schedules.
-            </CardDescription>
+            <CardTitle>Unpaid Students</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScheduleList schedules={upcomingSchedules} />
+            <UnpaidStudents students={dueLedgers} />
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="min-h-80">
           <CardHeader>
-            <CardTitle>Recent notification status</CardTitle>
-            <CardDescription>
-              Notification delivery logs will appear here after the adapter is
-              connected.
-            </CardDescription>
+            <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <BellIcon className="text-muted-foreground" />
-                <span className="truncate text-sm">SMS provider</span>
-              </div>
-              <Badge variant="outline">Pending</Badge>
-            </div>
+            <QuickActions batches={quickBatches} dueLedgers={dueLedgers} />
           </CardContent>
         </Card>
       </section>
-      <section className="grid gap-4 lg:grid-cols-2">
+
+      <section>
         <Card>
           <CardHeader>
-            <CardTitle>Recent student payments</CardTitle>
-            <CardDescription>Latest recorded student fee payments.</CardDescription>
+            <CardTitle>Upcoming Classes</CardTitle>
           </CardHeader>
           <CardContent>
-            <StudentPaymentList payments={recentStudentPayments} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent teacher salary payments</CardTitle>
-            <CardDescription>Latest recorded teacher salary payments.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TeacherPaymentList payments={recentTeacherPayments} />
+            <UpcomingClassesTable schedules={upcomingSchedules} />
           </CardContent>
         </Card>
       </section>
@@ -191,136 +154,126 @@ export default async function DashboardPage() {
   )
 }
 
-function ScheduleList({ schedules }: { schedules: DashboardSchedule[] }) {
+function MetricCard({
+  footerLeft,
+  footerRight,
+  icon: Icon,
+  label,
+  labelTone,
+  tone,
+  value,
+}: {
+  footerLeft: string
+  footerRight: string
+  icon: LucideIcon
+  label: string
+  labelTone: string
+  tone: string
+  value: string
+}) {
+  return (
+    <Card
+      className="min-h-[154px] rounded-xl border border-[#eef0f4] bg-white shadow-[0_8px_28px_rgba(16,24,40,0.035)]"
+      size="sm"
+    >
+      <CardContent className="relative flex min-h-[132px] flex-col justify-between px-5 py-4">
+        <span
+          className={`absolute top-1/2 right-6 flex size-14 -translate-y-1/2 items-center justify-center rounded-full ${tone}`}
+        >
+          <Icon strokeWidth={2.15} />
+        </span>
+        <div className="flex min-w-0 max-w-[calc(100%-4.5rem)] flex-col gap-4">
+          <p className={`truncate text-[15px] font-semibold ${labelTone}`}>
+            {label}
+          </p>
+          <p className="truncate text-[32px] leading-none font-bold tracking-normal text-[#101828]">
+            {value}
+          </p>
+        </div>
+        <div className="flex items-end justify-between gap-3 pr-16">
+          <p className="truncate text-[15px] font-medium text-[#6d7480]">
+            {footerLeft}
+          </p>
+          {footerRight ? (
+            <p className="shrink-0 text-[14px] font-semibold text-primary">
+              {footerRight}
+            </p>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function UpcomingClassesTable({ schedules }: { schedules: DashboardSchedule[] }) {
   if (!schedules.length) {
     return (
       <p className="text-sm text-muted-foreground">
-        No upcoming class schedules yet.
+        Upcoming classes will appear after schedules are added to batches.
       </p>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {schedules.map((schedule) => (
-        <div
-          className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2"
-          key={schedule.id}
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <CalendarClockIcon className="text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {schedule.subject || schedule.batch?.name || "Class"}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {schedule.batch?.name ? `${schedule.batch.name} - ` : ""}
-                {weekday(schedule.weekday)} {formatTime(schedule.start_time)} -{" "}
-                {formatTime(schedule.end_time)}
-                {schedule.room_name ? ` - ${schedule.room_name}` : ""}
-              </p>
-            </div>
-          </div>
-          <Badge variant="outline">{schedule.teacher?.name ?? "Unassigned"}</Badge>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function StudentPaymentList({
-  payments,
-}: {
-  payments: RecentStudentPayment[]
-}) {
-  if (!payments.length) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No student payments recorded yet.
-      </p>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {payments.map((payment) => (
-        <PaymentRow
-          amount={payment.amount}
-          key={payment.id}
-          method={payment.method}
-          name={payment.student?.name ?? "Student"}
-          receipt={payment.receipt_number}
-          date={payment.payment_date}
-        />
-      ))}
-    </div>
-  )
-}
-
-function TeacherPaymentList({
-  payments,
-}: {
-  payments: RecentTeacherPayment[]
-}) {
-  if (!payments.length) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No teacher salary payments recorded yet.
-      </p>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {payments.map((payment) => (
-        <PaymentRow
-          amount={payment.amount}
-          key={payment.id}
-          method={payment.method}
-          name={payment.teacher?.name ?? "Teacher"}
-          receipt={payment.receipt_number}
-          date={payment.payment_date}
-        />
-      ))}
-    </div>
-  )
-}
-
-function PaymentRow({
-  amount,
-  date,
-  method,
-  name,
-  receipt,
-}: {
-  amount: number | string
-  date: string
-  method: string
-  name: string
-  receipt: string
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{name}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {receipt} - {titleCase(method)} - {formatDate(date)}
-        </p>
-      </div>
-      <span className="text-sm font-medium">{formatTaka(amount)}</span>
+    <div className="overflow-hidden rounded-lg border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 font-medium">Time</th>
+            <th className="px-3 py-2 font-medium">Batch</th>
+            <th className="px-3 py-2 font-medium">Subject</th>
+            <th className="px-3 py-2 font-medium">Teacher</th>
+            <th className="px-3 py-2 font-medium">Room</th>
+          </tr>
+        </thead>
+        <tbody>
+          {schedules.map((schedule) => (
+            <tr className="border-t" key={schedule.id}>
+              <td className="px-3 py-3">
+                {weekday(schedule.weekday)} {formatTime(schedule.start_time)}
+              </td>
+              <td className="px-3 py-3">{schedule.batch?.name ?? "-"}</td>
+              <td className="px-3 py-3">{schedule.subject ?? "-"}</td>
+              <td className="px-3 py-3">{schedule.teacher?.name ?? "-"}</td>
+              <td className="px-3 py-3">{schedule.room_name || "-"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
 
 function displayCount(value: number | null) {
-  return value === null ? "0" : value.toString()
+  return value === null ? "0" : value.toLocaleString("en-BD")
 }
 
-function formatDate(value: string) {
+function formatMonth(value: string) {
   return new Intl.DateTimeFormat("en-BD", {
-    day: "2-digit",
-    month: "short",
+    month: "long",
+    year: "numeric",
   }).format(new Date(value))
+}
+
+function previousMonthStart(value: string) {
+  const date = new Date(value)
+  date.setMonth(date.getMonth() - 1)
+
+  return date.toISOString().slice(0, 10)
+}
+
+function percentChange(current: number, previous: number) {
+  if (previous <= 0) {
+    return current > 0 ? 100 : 0
+  }
+
+  return ((current - previous) / previous) * 100
+}
+
+function formatTrend(value: number) {
+  const sign = value >= 0 ? "+" : ""
+
+  return `${sign}${value.toFixed(1)}%`
 }
 
 function formatTaka(value: number | string) {
@@ -329,13 +282,6 @@ function formatTaka(value: number | string) {
 
 function formatTime(value: string) {
   return value.slice(0, 5)
-}
-
-function titleCase(value: string) {
-  return value
-    .split("_")
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join(" ")
 }
 
 function weekday(value: number) {

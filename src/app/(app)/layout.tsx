@@ -11,11 +11,19 @@ export default async function AppLayout({
   const admin = await requireAdminContext()
 
   return (
-    <SidebarProvider>
-      <AppSidebar admin={admin} />
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width-icon": "4.75rem",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar />
       <SidebarInset>
         <Topbar admin={admin} />
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</div>
+        <div className="flex flex-1 flex-col gap-6 bg-muted/20 p-4 md:p-6">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

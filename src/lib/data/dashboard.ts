@@ -43,6 +43,22 @@ export type RecentTeacherPayment = {
   } | null
 }
 
+export type RecentActivity = {
+  id: string
+  label: string
+  meta: string
+  tone: "student" | "payment" | "batch" | "schedule" | "salary"
+}
+
+export type DueStudentLedger = {
+  classLevel: string | null
+  dueAmount: number | string
+  id: string
+  studentId: string | null
+  studentName: string
+  studentPhone: string | null
+}
+
 type LedgerSummary = {
   expected: number
   paid: number
@@ -212,6 +228,148 @@ export async function listRecentTeacherSalaryPayments(tenantId: string) {
   }))
 }
 
+export async function listDashboardRecentActivities(tenantId: string) {
+  const supabase = await createClient()
+  const [students, batches, studentPayments, teacherPayments] = await Promise.all([
+    supabase
+      .from("students")
+      .select("id, name, created_at")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(2),
+    supabase
+      .from("batches")
+      .select("id, name, created_at")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(2),
+    supabase
+      .from("student_payments")
+      .select("id, amount, payment_date, created_at, student:students(name)")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(2),
+    supabase
+      .from("teacher_salary_payments")
+      .select("id, amount, payment_date, created_at, teacher:teachers(name)")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(2),
+  ])
+
+  const activities: RecentActivity[] = []
+
+  for (const student of students.data ?? []) {
+    activities.push({
+      id: `student-${student.id}`,
+      label: `New student ${student.name} has been added.`,
+      meta: relativeDate(student.created_at),
+      tone: "student",
+    })
+  }
+
+  for (const batch of batches.data ?? []) {
+    activities.push({
+      id: `batch-${batch.id}`,
+      label: `New batch ${batch.name} has been created.`,
+      meta: relativeDate(batch.created_at),
+      tone: "batch",
+    })
+  }
+
+  for (const payment of studentPayments.data ?? []) {
+    const student = firstNested(
+      (payment as unknown as { student?: { name: string } | { name: string }[] })
+        .student
+    )
+    activities.push({
+      id: `student-payment-${payment.id}`,
+      label: `Payment of ${formatTaka(payment.amount)} received from ${
+        student?.name ?? "student"
+      }.`,
+      meta: relativeDate(payment.created_at),
+      tone: "payment",
+    })
+  }
+
+  for (const payment of teacherPayments.data ?? []) {
+    const teacher = firstNested(
+      (payment as unknown as { teacher?: { name: string } | { name: string }[] })
+        .teacher
+    )
+    activities.push({
+      id: `teacher-payment-${payment.id}`,
+      label: `Salary payment of ${formatTaka(payment.amount)} recorded for ${
+        teacher?.name ?? "teacher"
+      }.`,
+      meta: relativeDate(payment.created_at),
+      tone: "salary",
+    })
+  }
+
+  return activities.slice(0, 5)
+}
+
+export async function listDashboardDueStudentLedgers(
+  tenantId: string,
+  ledgerMonth: string
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_monthly_ledgers")
+    .select(
+      `
+        id,
+        due_amount,
+        student:students (
+          id,
+          name,
+          phone,
+          class_level
+        )
+      `
+    )
+    .eq("tenant_id", tenantId)
+    .eq("ledger_month", ledgerMonth)
+    .gt("due_amount", 0)
+    .order("due_amount", { ascending: false })
+    .limit(50)
+
+  if (error || !data) {
+    return []
+  }
+
+  return (data as unknown as Array<{
+    id: string
+    due_amount: number | string
+    student?:
+      | {
+          class_level: string | null
+          id: string
+          name: string
+          phone: string | null
+        }
+      | Array<{
+          class_level: string | null
+          id: string
+          name: string
+          phone: string | null
+        }>
+      | null
+  }>).map((ledger) => {
+    const student = firstNested(ledger.student)
+
+    return {
+      classLevel: student?.class_level ?? null,
+      dueAmount: ledger.due_amount,
+      id: ledger.id,
+      studentId: student?.id ?? null,
+      studentName: student?.name ?? "Student",
+      studentPhone: student?.phone ?? null,
+    } satisfies DueStudentLedger
+  })
+}
+
 type RawDashboardSchedule = Omit<DashboardSchedule, "batch" | "teacher"> & {
   batch?:
     | DashboardSchedule["batch"]
@@ -265,4 +423,27 @@ function money(value: number | string | null | undefined) {
   const amount = Number(value ?? 0)
 
   return Number.isFinite(amount) ? amount : 0
+}
+
+function formatTaka(value: number | string | null | undefined) {
+  return `৳${money(value).toLocaleString("en-BD")}`
+}
+
+function relativeDate(value: string) {
+  const diff = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(Math.round(diff / 60000), 0)
+
+  if (minutes < 60) {
+    return minutes <= 1 ? "Just now" : `${minutes} minutes ago`
+  }
+
+  const hours = Math.round(minutes / 60)
+
+  if (hours < 24) {
+    return hours === 1 ? "1 hour ago" : `${hours} hours ago`
+  }
+
+  const days = Math.round(hours / 24)
+
+  return days === 1 ? "Yesterday" : `${days} days ago`
 }

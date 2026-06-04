@@ -43,6 +43,25 @@ export async function countTenantRecordsByStatus(
   return count ?? 0
 }
 
+export async function countTenantRecordsCreatedSince(
+  tableName: TenantTableName,
+  tenantId: string,
+  since: string
+) {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from(tableName)
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .gte("created_at", since)
+
+  if (error) {
+    return null
+  }
+
+  return count ?? 0
+}
+
 export async function listTenantPreviewRecords(
   tableName: TenantTableName,
   tenantId: string

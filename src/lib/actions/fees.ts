@@ -120,6 +120,24 @@ export async function generateStudentMonthlyLedgers(formData: FormData) {
 }
 
 export async function recordStudentPayment(ledgerId: string, formData: FormData) {
+  await saveStudentPayment(ledgerId, formData, "fees")
+}
+
+export async function recordStudentPaymentFromDashboard(formData: FormData) {
+  const ledgerId = stringField(formData, "ledger_id")
+
+  if (!ledgerId) {
+    throw new Error("Select a student ledger.")
+  }
+
+  await saveStudentPayment(ledgerId, formData, "dashboard")
+}
+
+async function saveStudentPayment(
+  ledgerId: string,
+  formData: FormData,
+  redirectTarget: "dashboard" | "fees"
+) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
   const amount = numberField(formData, "amount")
@@ -188,6 +206,12 @@ export async function recordStudentPayment(ledgerId: string, formData: FormData)
   }
 
   revalidatePath("/fees")
+  revalidatePath("/dashboard")
+
+  if (redirectTarget === "dashboard") {
+    redirect("/dashboard")
+  }
+
   redirect(`/fees?month=${monthInputValue(ledger.ledger_month)}`)
 }
 
