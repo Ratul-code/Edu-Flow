@@ -1,8 +1,6 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
+import type { LucideIcon } from "lucide-react";
 import {
   ChevronDownIcon,
   GraduationCapIcon,
@@ -14,8 +12,10 @@ import {
   SettingsIcon,
   UserRoundIcon,
   UsersRoundIcon,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import {
   Sidebar,
@@ -32,8 +32,8 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   {
@@ -66,7 +66,7 @@ const navItems = [
     href: "/settings",
     icon: SettingsIcon,
   },
-]
+];
 
 const feeSubItems = [
   {
@@ -77,17 +77,17 @@ const feeSubItems = [
     title: "Teacher",
     href: "/salaries",
   },
-]
+];
 
 export function AppSidebar() {
-  const pathname = usePathname()
-  const { state, toggleSidebar } = useSidebar()
+  const pathname = usePathname();
+  const { state, toggleSidebar } = useSidebar();
   const feesGroupActive = feeSubItems.some((item) =>
     isRouteActive(pathname, item.href)
-  )
-  const [feesOpen, setFeesOpen] = useState(false)
-  const showFees = feesGroupActive || feesOpen
-  const collapsed = state === "collapsed"
+  );
+  const [feesOpen, setFeesOpen] = useState(false);
+  const showFees = feesGroupActive || feesOpen;
+  const collapsed = state === "collapsed";
 
   return (
     <Sidebar
@@ -110,7 +110,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              className="h-auto gap-3 p-0 hover:bg-transparent data-active:bg-transparent group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! [&_svg]:size-8 group-data-[collapsible=icon]:[&_svg]:size-6"
+              className="h-auto  gap-3 p-0 hover:bg-transparent data-active:bg-transparent group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! [&_svg]:size-8 group-data-[collapsible=icon]:[&_svg]:size-6"
               render={<Link href="/dashboard" />}
               tooltip="Edu Flow"
             >
@@ -160,7 +160,7 @@ export function AppSidebar() {
                 {showFees ? (
                   <SidebarMenuSub className="mt-1.5 ml-8 gap-1.5 border-l-0 px-0 py-0">
                     {feeSubItems.map((item) => {
-                      const isActive = isRouteActive(pathname, item.href)
+                      const isActive = isRouteActive(pathname, item.href);
 
                       return (
                         <SidebarMenuSubItem key={item.href}>
@@ -178,7 +178,7 @@ export function AppSidebar() {
                             <span>{item.title}</span>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
-                      )
+                      );
                     })}
                   </SidebarMenuSub>
                 ) : null}
@@ -202,21 +202,21 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
 
 type NavItem = {
-  href: string
-  icon: LucideIcon
-  title: string
-}
+  href: string;
+  icon: LucideIcon;
+  title: string;
+};
 
 const navButtonClassName =
-  "h-12 justify-start gap-3 rounded-lg px-4 text-[15px] font-medium text-[#626a77] transition-colors hover:bg-primary/5 hover:text-primary data-active:bg-primary/10 data-active:font-semibold data-active:text-primary group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:[&>span]:hidden [&_svg]:size-5 [&>svg]:text-current"
+  "h-12 justify-start gap-3 rounded-full px-4 text-[15px] font-medium text-[#626a77] transition-colors hover:bg-primary/5 hover:text-primary data-active:bg-primary/10 data-active:font-semibold data-active:text-primary group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:[&>span]:hidden [&_svg]:size-5 [&>svg]:text-current";
 
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const Icon = item.icon
-  const active = isRouteActive(pathname, item.href)
+function NavLink({ item, pathname }: { item: NavItem; pathname: string; }) {
+  const Icon = item.icon;
+  const active = isRouteActive(pathname, item.href);
 
   return (
     <SidebarMenuItem>
@@ -230,9 +230,9 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
         <span>{item.title}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
-  )
+  );
 }
 
 function isRouteActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`)
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
