@@ -1,10 +1,9 @@
-import { ArchiveIcon, EyeIcon, PencilIcon } from "lucide-react"
+import { ArchiveIcon, EyeIcon } from "lucide-react"
 import Link from "next/link"
 
-import { archiveTeacher } from "@/lib/actions/teachers"
-import type { TeacherRecord } from "@/lib/data/teachers"
-import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/app/status-badge"
+import { TeacherEditSheet } from "@/components/teachers/teacher-form"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -13,6 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { archiveTeacher, updateTeacher } from "@/lib/actions/teachers"
+import type { TeacherRecord } from "@/lib/data/teachers"
 
 type TeachersTableProps = {
   teachers: TeacherRecord[]
@@ -55,14 +56,11 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                   <EyeIcon />
                   <span className="sr-only">View teacher</span>
                 </Button>
-                <Button
-                  render={<Link href={`/teachers/${teacher.id}/edit`} />}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <PencilIcon />
-                  <span className="sr-only">Edit teacher</span>
-                </Button>
+                <TeacherEditSheet
+                  action={updateTeacher.bind(null, teacher.id, "/teachers")}
+                  teacher={teacher}
+                  triggerVariant="icon"
+                />
                 {teacher.status === "active" ? (
                   <form action={archiveTeacher.bind(null, teacher.id)}>
                     <Button size="icon-sm" type="submit" variant="ghost">

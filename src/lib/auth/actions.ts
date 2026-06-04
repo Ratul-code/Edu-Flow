@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 
 import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { createClient } from "@/lib/supabase/server"
+import { loginSchema, parseFormData } from "@/lib/schemas"
 
 function loginError(message: string) {
   redirect(`/login?error=${encodeURIComponent(message)}`)
@@ -14,12 +15,7 @@ export async function signIn(formData: FormData) {
     loginError("Supabase environment variables are not configured yet.")
   }
 
-  const email = String(formData.get("email") ?? "").trim()
-  const password = String(formData.get("password") ?? "")
-
-  if (!email || !password) {
-    loginError("Enter both email and password.")
-  }
+  const { email, password } = parseFormData(loginSchema, formData)
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({

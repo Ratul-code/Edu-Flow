@@ -27,7 +27,11 @@ export function StudentListFilters({
   tags,
 }: StudentListFiltersProps) {
   return (
-    <form className="flex flex-col gap-3 lg:flex-row lg:items-center" role="search">
+    <form
+      action="/students"
+      className="flex flex-col gap-3 lg:flex-row lg:items-center"
+      role="search"
+    >
       <div className="relative min-w-0 flex-1">
         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
         <Input

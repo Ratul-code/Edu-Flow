@@ -4,14 +4,14 @@ import type { LucideIcon } from "lucide-react";
 import {
   ChevronDownIcon,
   GraduationCapIcon,
-  HouseIcon,
+  LayoutDashboard,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   ReceiptTextIcon,
   SendIcon,
   SettingsIcon,
   UserRoundIcon,
-  UsersRoundIcon,
+  UsersRoundIcon
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,7 +39,7 @@ const navItems = [
   {
     title: "Dashboard",
     href: "/dashboard",
-    icon: HouseIcon,
+    icon: LayoutDashboard,
   },
   {
     title: "Students",

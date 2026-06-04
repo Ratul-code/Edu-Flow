@@ -34,8 +34,15 @@ export function StudentsTable({ students }: StudentsTableProps) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {students.map((student) => (
-          <TableRow key={student.id}>
+        {students.map((student, index) => (
+          <TableRow
+            className={
+              index % 2 === 0
+                ? "bg-white hover:bg-emerald-50"
+                : "bg-emerald-50/45 hover:bg-emerald-50"
+            }
+            key={student.id}
+          >
             <TableCell className="font-medium">
               <Link className="hover:underline" href={`/students/${student.id}`}>
                 {student.name}

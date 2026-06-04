@@ -6,6 +6,11 @@ import { redirect } from "next/navigation"
 import { requireAdminContext } from "@/lib/auth/user"
 import { monthInputValue, monthStart } from "@/lib/data/fees"
 import { createClient } from "@/lib/supabase/server"
+import {
+  feePaymentSchema,
+  ledgerMonthSchema,
+  parseFormData,
+} from "@/lib/schemas"
 
 type ActiveStudent = {
   id: string
@@ -37,7 +42,8 @@ type ExistingLedger = {
 export async function generateStudentMonthlyLedgers(formData: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const ledgerMonth = monthStart(stringField(formData, "month"))
+  const { month } = parseFormData(ledgerMonthSchema, formData)
+  const ledgerMonth = monthStart(month)
 
   const [{ data: students, error: studentsError }, { data: assignments, error }] =
     await Promise.all([
@@ -140,11 +146,8 @@ async function saveStudentPayment(
 ) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const amount = numberField(formData, "amount")
-
-  if (amount <= 0) {
-    throw new Error("Payment amount must be greater than zero.")
-  }
+  const payment = parseFormData(feePaymentSchema, formData)
+  const amount = payment.amount
 
   const { data: ledger, error: ledgerError } = await supabase
     .from("student_monthly_ledgers")
@@ -175,9 +178,9 @@ async function saveStudentPayment(
     student_id: ledger.student_id,
     receipt_number: receiptNumber(ledger.ledger_month),
     amount,
-    method: paymentMethod(formData),
-    payment_date: nullableString(formData, "payment_date") ?? today(),
-    note: nullableString(formData, "note"),
+    method: payment.method,
+    payment_date: payment.payment_date || today(),
+    note: payment.note || null,
   })
 
   if (paymentError) {
@@ -273,29 +276,10 @@ function receiptNumber(ledgerMonth: string) {
   return `EF-${month}-${Date.now().toString(36).toUpperCase()}-${entropy}`
 }
 
-function paymentMethod(formData: FormData) {
-  const method = stringField(formData, "method")
-  const methods = new Set(["cash", "bkash", "nagad", "bank", "card", "other"])
-
-  return methods.has(method) ? method : "cash"
-}
-
 function stringField(formData: FormData, key: string) {
   const value = formData.get(key)
 
   return typeof value === "string" ? value.trim() : ""
-}
-
-function nullableString(formData: FormData, key: string) {
-  const value = stringField(formData, key)
-
-  return value || null
-}
-
-function numberField(formData: FormData, key: string) {
-  const value = Number(stringField(formData, key))
-
-  return Number.isFinite(value) && value >= 0 ? value : 0
 }
 
 function money(value: number | string | null | undefined) {

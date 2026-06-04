@@ -6,6 +6,12 @@ import { redirect } from "next/navigation"
 import { requireAdminContext } from "@/lib/auth/user"
 import { monthInputValue, monthStart } from "@/lib/data/fees"
 import { createClient } from "@/lib/supabase/server"
+import {
+  ledgerMonthSchema,
+  parseFormData,
+  salaryLedgerSchema,
+  salaryPaymentSchema,
+} from "@/lib/schemas"
 
 type ActiveTeacher = {
   id: string
@@ -22,7 +28,8 @@ type ExistingSalaryLedger = {
 export async function generateTeacherSalaryLedgers(formData: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const ledgerMonth = monthStart(stringField(formData, "month"))
+  const { month } = parseFormData(ledgerMonthSchema, formData)
+  const ledgerMonth = monthStart(month)
 
   const [{ data: teachers, error: teachersError }, { data: existing, error }] =
     await Promise.all([
@@ -103,8 +110,8 @@ export async function updateTeacherSalaryLedger(
     throw new Error(error?.message ?? "Ledger not found.")
   }
 
-  const expectedSalary = numberField(formData, "expected_salary")
-  const adjustmentAmount = signedNumberField(formData, "adjustment_amount")
+  const { expected_salary: expectedSalary, adjustment_amount: adjustmentAmount } =
+    parseFormData(salaryLedgerSchema, formData)
   const paidAmount = money(ledger.paid_amount)
   const dueAmount = salaryDue(expectedSalary, adjustmentAmount, paidAmount)
   const totalExpected = Math.max(expectedSalary + adjustmentAmount, 0)
@@ -134,11 +141,8 @@ export async function recordTeacherSalaryPayment(
 ) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const amount = numberField(formData, "amount")
-
-  if (amount <= 0) {
-    throw new Error("Payment amount must be greater than zero.")
-  }
+  const payment = parseFormData(salaryPaymentSchema, formData)
+  const amount = payment.amount
 
   const { data: ledger, error: ledgerError } = await supabase
     .from("teacher_salary_ledgers")
@@ -171,9 +175,9 @@ export async function recordTeacherSalaryPayment(
       teacher_id: ledger.teacher_id,
       receipt_number: salaryReceiptNumber(ledger.ledger_month),
       amount,
-      method: paymentMethod(formData),
-      payment_date: nullableString(formData, "payment_date") ?? today(),
-      note: nullableString(formData, "note"),
+      method: payment.method,
+      payment_date: payment.payment_date || today(),
+      note: payment.note || null,
     })
 
   if (paymentError) {
@@ -234,37 +238,6 @@ function salaryReceiptNumber(ledgerMonth: string) {
   const entropy = Math.random().toString(36).slice(2, 6).toUpperCase()
 
   return `ES-${month}-${Date.now().toString(36).toUpperCase()}-${entropy}`
-}
-
-function paymentMethod(formData: FormData) {
-  const method = stringField(formData, "method")
-  const methods = new Set(["cash", "bkash", "nagad", "bank", "card", "other"])
-
-  return methods.has(method) ? method : "cash"
-}
-
-function stringField(formData: FormData, key: string) {
-  const value = formData.get(key)
-
-  return typeof value === "string" ? value.trim() : ""
-}
-
-function nullableString(formData: FormData, key: string) {
-  const value = stringField(formData, key)
-
-  return value || null
-}
-
-function numberField(formData: FormData, key: string) {
-  const value = Number(stringField(formData, key))
-
-  return Number.isFinite(value) && value >= 0 ? value : 0
-}
-
-function signedNumberField(formData: FormData, key: string) {
-  const value = Number(stringField(formData, key))
-
-  return Number.isFinite(value) ? value : 0
 }
 
 function money(value: number | string | null | undefined) {

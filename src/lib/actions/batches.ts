@@ -5,6 +5,15 @@ import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
 import { createClient } from "@/lib/supabase/server"
+import {
+  batchAssignmentSchema,
+  batchSchema,
+  classScheduleSchema,
+  parseFormData,
+  parseMultiValueFormData,
+  studentBatchFeeOverrideSchema,
+  type BatchFormData,
+} from "@/lib/schemas"
 
 export async function createBatch(formData: FormData) {
   const admin = await requireAdminContext()
@@ -66,16 +75,12 @@ export async function archiveBatch(batchId: string) {
 export async function assignStudentToBatch(batchId: string, formData: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const studentIds = formData
-    .getAll("student_ids")
-    .filter((value): value is string => typeof value === "string" && !!value)
+  const data = parseMultiValueFormData(batchAssignmentSchema, formData, [
+    "student_ids",
+  ])
 
-  if (!studentIds.length) {
-    throw new Error("Select at least one student.")
-  }
-
-  const joinedAt = nullableString(formData, "joined_at") ?? today()
-  const rows = studentIds.map((studentId) => ({
+  const joinedAt = data.joined_at || today()
+  const rows = data.student_ids.map((studentId) => ({
     tenant_id: admin.tenantId,
     student_id: studentId,
     batch_id: batchId,
@@ -102,7 +107,10 @@ export async function updateStudentBatchFeeOverride(
 ) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const feeOverride = nullableNumber(formData, "fee_override")
+  const { fee_override: feeOverride } = parseFormData(
+    studentBatchFeeOverrideSchema,
+    formData
+  )
   const { error } = await supabase
     .from("student_batches")
     .update({
@@ -143,10 +151,8 @@ export async function archiveStudentBatch(
 export async function createClassSchedule(batchId: string, formData: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const teacherId = nullableString(formData, "teacher_id")
-  const weekday = numberField(formData, "weekday")
-  const startTime = requiredString(formData, "start_time", "Start time is required.")
-  const endTime = requiredString(formData, "end_time", "End time is required.")
+  const data = parseFormData(classScheduleSchema, formData)
+  const teacherId = data.teacher_id || null
 
   if (teacherId) {
     const { count, error: conflictError } = await supabase
@@ -154,10 +160,10 @@ export async function createClassSchedule(batchId: string, formData: FormData) {
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", admin.tenantId)
       .eq("teacher_id", teacherId)
-      .eq("weekday", weekday)
+      .eq("weekday", data.weekday)
       .eq("status", "active")
-      .lt("start_time", endTime)
-      .gt("end_time", startTime)
+      .lt("start_time", data.end_time)
+      .gt("end_time", data.start_time)
 
     if (conflictError) {
       throw new Error(conflictError.message)
@@ -174,11 +180,11 @@ export async function createClassSchedule(batchId: string, formData: FormData) {
     tenant_id: admin.tenantId,
     batch_id: batchId,
     teacher_id: teacherId,
-    subject: requiredString(formData, "subject", "Subject is required."),
-    weekday,
-    start_time: startTime,
-    end_time: endTime,
-    room_name: nullableString(formData, "room_name"),
+    subject: data.subject,
+    weekday: data.weekday,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    room_name: data.room_name || null,
     status: "active",
   })
 
@@ -209,63 +215,25 @@ export async function archiveClassSchedule(batchId: string, scheduleId: string) 
 }
 
 function batchPayloadFromForm(formData: FormData, tenantId: string) {
-  const name = requiredString(formData, "name", "Batch name is required.")
+  const data = parseFormData(batchSchema, formData)
 
   return {
     tenant_id: tenantId,
-    name,
+    ...batchPayload(data),
+  }
+}
+
+function batchPayload(data: BatchFormData) {
+  return {
+    name: data.name,
     subject: null,
-    class_level: nullableString(formData, "class_level"),
-    medium: nullableString(formData, "medium"),
-    group_name: nullableString(formData, "group_name"),
-    monthly_fee: numberField(formData, "monthly_fee"),
+    class_level: data.class_level || null,
+    medium: data.medium || null,
+    group_name: data.group_name || null,
+    monthly_fee: data.monthly_fee,
     teacher_id: null,
-    status: statusField(formData),
+    status: data.status,
   }
-}
-
-function statusField(formData: FormData) {
-  return stringField(formData, "status") === "archived" ? "archived" : "active"
-}
-
-function requiredString(formData: FormData, key: string, message: string) {
-  const value = stringField(formData, key)
-
-  if (!value) {
-    throw new Error(message)
-  }
-
-  return value
-}
-
-function stringField(formData: FormData, key: string) {
-  const value = formData.get(key)
-
-  return typeof value === "string" ? value.trim() : ""
-}
-
-function nullableString(formData: FormData, key: string) {
-  const value = stringField(formData, key)
-
-  return value || null
-}
-
-function numberField(formData: FormData, key: string) {
-  const value = Number(stringField(formData, key))
-
-  return Number.isFinite(value) && value >= 0 ? value : 0
-}
-
-function nullableNumber(formData: FormData, key: string) {
-  const rawValue = stringField(formData, key)
-
-  if (!rawValue) {
-    return null
-  }
-
-  const value = Number(rawValue)
-
-  return Number.isFinite(value) && value >= 0 ? value : null
 }
 
 function today() {

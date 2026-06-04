@@ -1,9 +1,9 @@
-import { ArchiveIcon, PencilIcon } from "lucide-react"
-import Link from "next/link"
+import { ArchiveIcon } from "lucide-react"
 import { notFound } from "next/navigation"
 
 import { PageHeader } from "@/components/app/page-header"
 import { StatusBadge } from "@/components/app/status-badge"
+import { TeacherEditSheet } from "@/components/teachers/teacher-form"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { archiveTeacher } from "@/lib/actions/teachers"
+import { archiveTeacher, updateTeacher } from "@/lib/actions/teachers"
 import { requireAdminContext } from "@/lib/auth/user"
 import { getTeacherById } from "@/lib/data/teachers"
 
@@ -39,10 +39,10 @@ export default async function TeacherDetailPage({
         title={teacher.name}
       />
       <div className="flex flex-wrap gap-2">
-        <Button render={<Link href={`/teachers/${teacher.id}/edit`} />}>
-          <PencilIcon data-icon="inline-start" />
-          Edit teacher
-        </Button>
+        <TeacherEditSheet
+          action={updateTeacher.bind(null, teacher.id, `/teachers/${teacher.id}`)}
+          teacher={teacher}
+        />
         {teacher.status === "active" ? (
           <form action={archiveTeacher.bind(null, teacher.id)}>
             <Button type="submit" variant="outline">

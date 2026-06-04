@@ -1,10 +1,7 @@
-import { PlusIcon } from "lucide-react"
-import Link from "next/link"
-
 import { PageHeader } from "@/components/app/page-header"
+import { TeacherCreateSheet } from "@/components/teachers/teacher-form"
 import { TeacherListFilters } from "@/components/teachers/teacher-list-filters"
 import { TeachersTable } from "@/components/teachers/teachers-table"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -14,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
+import { createTeacher } from "@/lib/actions/teachers"
 import { requireAdminContext } from "@/lib/auth/user"
 import { listTeachers, type TeacherStatus } from "@/lib/data/teachers"
 
@@ -49,10 +47,7 @@ export default async function TeachersPage({
             </CardDescription>
           </div>
           <CardAction>
-            <Button render={<Link href="/teachers/new" />}>
-              <PlusIcon data-icon="inline-start" />
-              Add teacher
-            </Button>
+            <TeacherCreateSheet action={createTeacher} />
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -67,10 +62,7 @@ export default async function TeachersPage({
                   Add a teacher or adjust the search and filters.
                 </EmptyDescription>
               </EmptyHeader>
-              <Button render={<Link href="/teachers/new" />}>
-                <PlusIcon data-icon="inline-start" />
-                Add teacher
-              </Button>
+              <TeacherCreateSheet action={createTeacher} />
             </Empty>
           )}
         </CardContent>

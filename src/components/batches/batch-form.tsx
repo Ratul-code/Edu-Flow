@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { requireAdminContext } from "@/lib/auth/user"
+import { checkClassLevelsTableExists, listClassLevels } from "@/lib/data/class-levels"
 
 type BatchFormProps = {
   action: (formData: FormData) => void | Promise<void>
@@ -21,13 +23,16 @@ type BatchFormProps = {
   title: string
 }
 
-export function BatchForm({
+export async function BatchForm({
   action,
   batch,
   cancelHref,
   submitLabel,
   title,
 }: BatchFormProps) {
+  const admin = await requireAdminContext()
+  const tableExists = await checkClassLevelsTableExists()
+  const classLevels = tableExists ? await listClassLevels(admin.tenantId) : []
   return (
     <form action={action}>
       <Card>
@@ -45,12 +50,28 @@ export function BatchForm({
             </Field>
             <Field>
               <FieldLabel htmlFor="class_level">Class level</FieldLabel>
-              <Input
-                id="class_level"
-                name="class_level"
-                defaultValue={batch?.class_level ?? ""}
-                placeholder="Class 9"
-              />
+              {tableExists && classLevels.length > 0 ? (
+                <select
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  defaultValue={batch?.class_level ?? ""}
+                  id="class_level"
+                  name="class_level"
+                >
+                  <option value="">Not set</option>
+                  {classLevels.map((level) => (
+                    <option key={level.id} value={level.name}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  id="class_level"
+                  name="class_level"
+                  defaultValue={batch?.class_level ?? ""}
+                  placeholder="Class 9"
+                />
+              )}
             </Field>
             <Field>
               <FieldLabel htmlFor="monthly_fee">Monthly fee</FieldLabel>

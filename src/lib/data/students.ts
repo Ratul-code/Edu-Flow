@@ -30,6 +30,16 @@ export type StudentListFilters = {
   tag?: string
 }
 
+export type StudentPagination = {
+  page: number
+  pageSize: number
+}
+
+export type PaginatedStudents = {
+  students: StudentRecord[]
+  totalCount: number
+}
+
 const studentSelect = `
   id,
   tenant_id,
@@ -53,13 +63,28 @@ export async function listStudents(
   tenantId: string,
   filters: StudentListFilters = {}
 ) {
+  const { students } = await listStudentsPage(tenantId, filters, {
+    page: 1,
+    pageSize: 100,
+  })
+
+  return students
+}
+
+export async function listStudentsPage(
+  tenantId: string,
+  filters: StudentListFilters = {},
+  pagination: StudentPagination
+): Promise<PaginatedStudents> {
   const supabase = await createClient()
+  const from = Math.max(pagination.page - 1, 0) * pagination.pageSize
+  const to = from + pagination.pageSize - 1
   let query = supabase
     .from("students")
-    .select(studentSelect)
+    .select(studentSelect, { count: "exact" })
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
-    .limit(100)
+    .range(from, to)
 
   if (filters.status && filters.status !== "all") {
     query = query.eq("status", filters.status)
@@ -87,13 +112,16 @@ export async function listStudents(
     query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
   }
 
-  const { data, error } = await query
+  const { count, data, error } = await query
 
   if (error) {
-    return []
+    return { students: [], totalCount: 0 }
   }
 
-  return data as StudentRecord[]
+  return {
+    students: data as StudentRecord[],
+    totalCount: count ?? 0,
+  }
 }
 
 export async function getStudentById(tenantId: string, studentId: string) {

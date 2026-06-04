@@ -5,32 +5,53 @@ import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
 import { createClient } from "@/lib/supabase/server"
+import {
+  formatZodErrors,
+  studentSchema,
+  parseFormData,
+  type FormState,
+  type StudentFormData,
+} from "@/lib/schemas"
 
-export async function createStudent(formData: FormData) {
+export async function createStudent(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const payload = studentPayloadFromForm(formData, admin.tenantId)
+  const result = studentSchema.safeParse(Object.fromEntries(formData.entries()))
 
-  const { data, error } = await supabase
+  if (!result.success) {
+    return { errors: formatZodErrors(result.error) }
+  }
+
+  const data = result.data
+  const payload = buildStudentPayload(data, admin.tenantId)
+
+  const { data: created, error } = await supabase
     .from("students")
     .insert(payload)
     .select("id")
     .single()
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Could not create student.")
+  if (error || !created) {
+    return { message: error?.message ?? "Could not create student." }
   }
 
-  await syncStudentBatchAssignments(admin.tenantId, data.id, formData)
+  await syncStudentBatchAssignments(admin.tenantId, created.id, formData)
 
   revalidatePath("/students")
-  redirect(`/students/${data.id}`)
+  redirect(`/students/${created.id}`)
 }
 
-export async function updateStudent(studentId: string, formData: FormData) {
+export async function updateStudent(
+  studentId: string,
+  formData: FormData
+) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
-  const payload = studentPayloadFromForm(formData, admin.tenantId)
+  const data = parseFormData(studentSchema, formData)
+  const payload = buildStudentPayload(data, admin.tenantId)
 
   const { error } = await supabase
     .from("students")
@@ -67,29 +88,29 @@ export async function archiveStudent(studentId: string) {
   redirect("/students")
 }
 
-function studentPayloadFromForm(formData: FormData, tenantId: string) {
-  const name = stringField(formData, "name")
-
-  if (!name) {
-    throw new Error("Student name is required.")
-  }
+function buildStudentPayload(
+  data: StudentFormData,
+  tenantId: string
+) {
+  const tags = data.tags
+    ? data.tags.split(",").map((t) => t.trim()).filter(Boolean)
+    : []
 
   return {
     tenant_id: tenantId,
-    name,
-    phone: nullableStringField(formData, "phone"),
-    guardian_name: nullableStringField(formData, "guardian_name"),
-    guardian_phone: nullableStringField(formData, "guardian_phone"),
-    school: nullableStringField(formData, "school"),
-    class_level: nullableStringField(formData, "class_level"),
-    medium: nullableStringField(formData, "medium"),
-    group_name: nullableStringField(formData, "group_name"),
-    tags: tagsField(formData),
+    name: data.name,
+    phone: data.phone || null,
+    guardian_name: data.guardian_name || null,
+    guardian_phone: data.guardian_phone || null,
+    school: data.school || null,
+    class_level: data.class_level || null,
+    medium: data.medium || null,
+    group_name: data.group_name || null,
+    tags,
     admission_date:
-      nullableStringField(formData, "admission_date") ??
-      new Date().toISOString().slice(0, 10),
-    status: studentStatusField(formData),
-    notes: nullableStringField(formData, "notes"),
+      data.admission_date || new Date().toISOString().slice(0, 10),
+    status: data.status,
+    notes: data.notes || null,
   }
 }
 
@@ -109,9 +130,7 @@ async function syncStudentBatchAssignments(
     .eq("tenant_id", tenantId)
     .eq("student_id", studentId)
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error) return
 
   const selected = new Set(selectedBatchIds)
   const existingRows = existing ?? []
@@ -125,47 +144,35 @@ async function syncStudentBatchAssignments(
   }))
 
   if (rowsToUpsert.length) {
-    const { error: upsertError } = await supabase
+    await supabase
       .from("student_batches")
       .upsert(rowsToUpsert, { onConflict: "tenant_id,student_id,batch_id" })
-
-    if (upsertError) {
-      throw new Error(upsertError.message)
-    }
   }
 
-  const assignmentIdsToArchive = existingRows
+  const idsToArchive = existingRows
     .filter((row) => !selected.has(row.batch_id))
     .map((row) => row.id)
 
-  if (assignmentIdsToArchive.length) {
-    const { error: archiveError } = await supabase
+  if (idsToArchive.length) {
+    await supabase
       .from("student_batches")
       .update({ status: "archived" })
       .eq("tenant_id", tenantId)
       .eq("student_id", studentId)
-      .in("id", assignmentIdsToArchive)
-
-    if (archiveError) {
-      throw new Error(archiveError.message)
-    }
+      .in("id", idsToArchive)
   }
 
-  const assignmentIdsToActivate = existingRows
+  const idsToActivate = existingRows
     .filter((row) => selected.has(row.batch_id))
     .map((row) => row.id)
 
-  if (assignmentIdsToActivate.length) {
-    const { error: activeError } = await supabase
+  if (idsToActivate.length) {
+    await supabase
       .from("student_batches")
       .update({ status: "active" })
       .eq("tenant_id", tenantId)
       .eq("student_id", studentId)
-      .in("id", assignmentIdsToActivate)
-
-    if (activeError) {
-      throw new Error(activeError.message)
-    }
+      .in("id", idsToActivate)
   }
 
   for (const batchId of selected) {
@@ -173,35 +180,4 @@ async function syncStudentBatchAssignments(
       revalidatePath(`/batches/${batchId}`)
     }
   }
-}
-
-function studentStatusField(formData: FormData) {
-  const status = stringField(formData, "status")
-
-  return status === "archived" ? "archived" : "active"
-}
-
-function stringField(formData: FormData, key: string) {
-  const value = formData.get(key)
-
-  return typeof value === "string" ? value.trim() : ""
-}
-
-function nullableStringField(formData: FormData, key: string) {
-  const value = stringField(formData, key)
-
-  return value || null
-}
-
-function tagsField(formData: FormData) {
-  const tags = stringField(formData, "tags")
-
-  if (!tags) {
-    return []
-  }
-
-  return tags
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
 }

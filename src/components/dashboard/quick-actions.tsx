@@ -1,5 +1,3 @@
-"use client"
-
 import {
   BellIcon,
   BookOpenIcon,
@@ -12,6 +10,7 @@ import { createBatch } from "@/lib/actions/batches"
 import { recordStudentPaymentFromDashboard } from "@/lib/actions/fees"
 import { createStudent } from "@/lib/actions/students"
 import type { BatchRecord } from "@/lib/data/batches"
+import { StudentCreateSheet } from "@/components/students/student-form"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -69,6 +68,18 @@ export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
       {actions.map((action) => {
         const Icon = action.icon
 
+        if (action.type === "student") {
+          return (
+            <StudentCreateSheet
+              action={createStudent}
+              batches={batches}
+              key={action.type}
+              triggerLabel={action.title}
+              triggerVariant="quick-action"
+            />
+          )
+        }
+
         return (
           <Dialog key={action.type}>
             <DialogTrigger
@@ -90,9 +101,6 @@ export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
               <ChevronRightIcon className="text-muted-foreground" />
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
-              {action.type === "student" ? (
-                <StudentDialog batches={batches} />
-              ) : null}
               {action.type === "batch" ? <BatchDialog /> : null}
               {action.type === "payment" ? (
                 <PaymentDialog dueLedgers={dueLedgers} />
@@ -103,77 +111,6 @@ export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
         )
       })}
     </div>
-  )
-}
-
-function StudentDialog({ batches }: { batches: BatchRecord[] }) {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Add New Student</DialogTitle>
-        <DialogDescription>
-          Add a simple student record and optionally assign batches.
-        </DialogDescription>
-      </DialogHeader>
-      <form action={createStudent} className="flex flex-col gap-4">
-        <FieldGroup className="sm:grid sm:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="qa-student-name">Name</FieldLabel>
-            <Input id="qa-student-name" name="name" required />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="qa-student-phone">Phone</FieldLabel>
-            <Input id="qa-student-phone" name="phone" type="tel" />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="qa-guardian-name">Guardian name</FieldLabel>
-            <Input id="qa-guardian-name" name="guardian_name" />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="qa-guardian-phone">Guardian phone</FieldLabel>
-            <Input id="qa-guardian-phone" name="guardian_phone" type="tel" />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="qa-class-level">Class level</FieldLabel>
-            <Input id="qa-class-level" name="class_level" />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="qa-medium">Medium</FieldLabel>
-            <select
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              id="qa-medium"
-              name="medium"
-            >
-              <option value="">Not set</option>
-              <option value="Bangla Medium">Bangla Medium</option>
-              <option value="English Version">English Version</option>
-              <option value="English Medium">English Medium</option>
-            </select>
-          </Field>
-          {batches.length ? (
-            <Field className="sm:col-span-2">
-              <FieldLabel>Assign batches</FieldLabel>
-              <div className="grid max-h-36 gap-2 overflow-y-auto rounded-lg border bg-muted/20 p-3 sm:grid-cols-2">
-                {batches.map((batch) => (
-                  <label className="flex items-start gap-2 text-sm" key={batch.id}>
-                    <input
-                      className="mt-1"
-                      name="batch_ids"
-                      type="checkbox"
-                      value={batch.id}
-                    />
-                    <span>{batch.name}</span>
-                  </label>
-                ))}
-              </div>
-            </Field>
-          ) : null}
-        </FieldGroup>
-        <DialogFooter>
-          <Button type="submit">Create student</Button>
-        </DialogFooter>
-      </form>
-    </>
   )
 }
 

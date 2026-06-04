@@ -1,6 +1,8 @@
 import Link from "next/link"
 
-import type { TeacherRecord } from "@/lib/data/teachers"
+import { TeacherCreateSheetClient } from "@/components/teachers/teacher-create-sheet-client"
+import { TeacherEditSheetClient } from "@/components/teachers/teacher-edit-sheet-client"
+import { TeacherFields } from "@/components/teachers/teacher-fields"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -10,9 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import type { TeacherRecord } from "@/lib/data/teachers"
+import type { FormState } from "@/lib/schemas"
 
 type TeacherFormProps = {
   action: (formData: FormData) => void | Promise<void>
@@ -20,6 +21,18 @@ type TeacherFormProps = {
   submitLabel: string
   teacher?: TeacherRecord
   title: string
+}
+
+type TeacherCreateSheetProps = {
+  action: (prev: FormState, formData: FormData) => Promise<FormState>
+  triggerLabel?: string
+}
+
+type TeacherEditSheetProps = {
+  action: (prev: FormState, formData: FormData) => Promise<FormState>
+  teacher: TeacherRecord
+  triggerLabel?: string
+  triggerVariant?: "button" | "icon"
 }
 
 export function TeacherForm({
@@ -39,71 +52,7 @@ export function TeacherForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <FieldGroup className="sm:grid sm:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="name">Name</FieldLabel>
-              <Input
-                id="name"
-                name="name"
-                defaultValue={teacher?.name}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="phone">Phone</FieldLabel>
-              <Input
-                id="phone"
-                name="phone"
-                defaultValue={teacher?.phone ?? ""}
-                type="tel"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="subject_specialty">
-                Subject specialty
-              </FieldLabel>
-              <Input
-                id="subject_specialty"
-                name="subject_specialty"
-                defaultValue={teacher?.subject_specialty ?? ""}
-                placeholder="Math"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="default_monthly_salary">
-                Default monthly salary
-              </FieldLabel>
-              <Input
-                id="default_monthly_salary"
-                min="0"
-                name="default_monthly_salary"
-                defaultValue={String(teacher?.default_monthly_salary ?? 0)}
-                step="0.01"
-                type="number"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="status">Status</FieldLabel>
-              <select
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                defaultValue={teacher?.status ?? "active"}
-                id="status"
-                name="status"
-              >
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </select>
-            </Field>
-            <Field className="sm:col-span-2">
-              <FieldLabel htmlFor="notes">Notes</FieldLabel>
-              <Textarea
-                id="notes"
-                name="notes"
-                defaultValue={teacher?.notes ?? ""}
-                rows={4}
-              />
-            </Field>
-          </FieldGroup>
+          <TeacherFields teacher={teacher} />
         </CardContent>
         <CardFooter className="justify-end gap-2">
           <Button render={<Link href={cancelHref} />} variant="outline">
@@ -113,5 +62,33 @@ export function TeacherForm({
         </CardFooter>
       </Card>
     </form>
+  )
+}
+
+export function TeacherCreateSheet({
+  action,
+  triggerLabel,
+}: TeacherCreateSheetProps) {
+  return (
+    <TeacherCreateSheetClient
+      action={action}
+      triggerLabel={triggerLabel}
+    />
+  )
+}
+
+export function TeacherEditSheet({
+  action,
+  teacher,
+  triggerLabel,
+  triggerVariant,
+}: TeacherEditSheetProps) {
+  return (
+    <TeacherEditSheetClient
+      action={action}
+      teacher={teacher}
+      triggerLabel={triggerLabel}
+      triggerVariant={triggerVariant}
+    />
   )
 }
