@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Edu Flow
+
+Edu Flow is a coaching management SaaS MVP for Bangladeshi coaching centers.
+Phase 1 sets up the Next.js foundation, shadcn/ui component system, Supabase
+Auth wiring, and the protected admin dashboard shell.
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies and run the local server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a Supabase project, then copy `.env.example` to `.env.local` and fill:
 
-## Learn More
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
-To learn more about Next.js, take a look at the following resources:
+Create an admin user in Supabase Auth. Optional user metadata can include:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```json
+{
+  "full_name": "Admin Name",
+  "tenant_name": "Dhaka Coaching Center"
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Without Supabase env values, `/dashboard` redirects to `/login` and the login
+page shows a configuration warning.
 
-## Deploy on Vercel
+## Phase 1 Routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/login` - admin login page
+- `/dashboard` - protected dashboard shell
+- `/students`, `/teachers`, `/batches`, `/schedule`, `/fees`, `/salaries`,
+  `/notifications`, `/settings` - protected placeholder routes for upcoming
+  milestones
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Checks
+
+```bash
+npm run lint
+npm run build
+```
