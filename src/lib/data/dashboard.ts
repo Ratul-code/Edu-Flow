@@ -54,6 +54,7 @@ export type DueStudentLedger = {
   classLevel: string | null
   dueAmount: number | string
   id: string
+  status: string
   studentId: string | null
   studentName: string
   studentPhone: string | null
@@ -321,6 +322,7 @@ export async function listDashboardDueStudentLedgers(
       `
         id,
         due_amount,
+        status,
         student:students (
           id,
           name,
@@ -331,6 +333,7 @@ export async function listDashboardDueStudentLedgers(
     )
     .eq("tenant_id", tenantId)
     .eq("ledger_month", ledgerMonth)
+    .in("status", ["due", "overdue", "partial"])
     .gt("due_amount", 0)
     .order("due_amount", { ascending: false })
     .limit(50)
@@ -342,6 +345,7 @@ export async function listDashboardDueStudentLedgers(
   return (data as unknown as Array<{
     id: string
     due_amount: number | string
+    status: string
     student?:
       | {
           class_level: string | null
@@ -363,6 +367,7 @@ export async function listDashboardDueStudentLedgers(
       classLevel: student?.class_level ?? null,
       dueAmount: ledger.due_amount,
       id: ledger.id,
+      status: ledger.status,
       studentId: student?.id ?? null,
       studentName: student?.name ?? "Student",
       studentPhone: student?.phone ?? null,

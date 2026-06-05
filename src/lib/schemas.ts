@@ -95,7 +95,7 @@ export const studentSchema = z.object({
   phone: requiredText("Phone", 20, "Phone number is too long."),
   guardian_name: requiredText("Guardian name", 100, "Guardian name is too long."),
   guardian_phone: requiredText("Guardian phone", 20, "Guardian phone is too long."),
-  school: requiredText("School", 150, "School name is too long."),
+  institution: requiredText("Institution", 150, "Institution name is too long."),
   class_level: requiredText("Class level", 50, "Class level is too long."),
   medium: optionalText(50, "Medium is too long."),
   group_name: optionalText(50, "Group is too long."),
@@ -189,6 +189,33 @@ export const ledgerMonthSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{4}-\d{2}(-\d{2})?$/, "Enter a valid month."),
+});
+
+export const billingSettingsSchema = z.object({
+  payment_start_day: z
+    .string()
+    .trim()
+    .min(1, "Payment start day is required.")
+    .transform((value) => Number(value))
+    .pipe(
+      z
+        .number("Enter a valid payment start day.")
+        .int("Payment start day must be a whole number.")
+        .min(1, "Payment start day must be at least 1.")
+        .max(31, "Payment start day cannot be after day 31.")
+    ),
+  grace_period_days: z
+    .string()
+    .trim()
+    .min(1, "Grace period is required.")
+    .transform((value) => Number(value))
+    .pipe(
+      z
+        .number("Enter a valid grace period.")
+        .int("Grace period must be a whole number.")
+        .min(1, "Grace period must be at least 1 day.")
+        .max(31, "Grace period cannot be more than 31 days.")
+    ),
 });
 
 export const feePaymentSchema = z.object({

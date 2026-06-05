@@ -36,6 +36,7 @@ type StudentCreateSheetClientProps = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>
   batches: BatchRecord[]
   classLevels: ClassLevelRecord[]
+  defaultFeeStartMonth: string
   tableExists: boolean
   triggerLabel?: string
   triggerVariant?: "button" | "quick-action"
@@ -45,6 +46,7 @@ export function StudentCreateSheetClient({
   action,
   batches,
   classLevels,
+  defaultFeeStartMonth,
   tableExists,
   triggerLabel = "Add student",
   triggerVariant = "button",
@@ -184,7 +186,9 @@ export function StudentCreateSheetClient({
             <StudentFields
                 batches={batches}
                 classLevels={classLevels}
+                defaultFeeStartMonth={defaultFeeStartMonth}
                 errors={displayedErrors}
+                showFeeStartControls
                 tableExists={tableExists}
               />
           </div>

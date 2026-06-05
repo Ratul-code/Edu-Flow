@@ -1,9 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
   batchAssignmentSchema,
@@ -31,7 +31,11 @@ export async function createBatch(formData: FormData) {
   }
 
   revalidatePath("/batches")
-  redirect(`/batches/${data.id}`)
+  redirectWithFlashToast(`/batches/${data.id}`, {
+    title: "Batch added",
+    message: `${payload.name} has been created successfully.`,
+    tone: "success",
+  })
 }
 
 export async function updateBatch(batchId: string, formData: FormData) {
@@ -51,10 +55,14 @@ export async function updateBatch(batchId: string, formData: FormData) {
 
   revalidatePath("/batches")
   revalidatePath(`/batches/${batchId}`)
-  redirect(`/batches/${batchId}`)
+  redirectWithFlashToast(`/batches/${batchId}`, {
+    title: "Batch updated",
+    message: `${payload.name} changes have been saved.`,
+    tone: "warning",
+  })
 }
 
-export async function archiveBatch(batchId: string) {
+export async function archiveBatch(batchId: string, formData?: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
   const { error } = await supabase
@@ -69,7 +77,11 @@ export async function archiveBatch(batchId: string) {
 
   revalidatePath("/batches")
   revalidatePath(`/batches/${batchId}`)
-  redirect("/batches")
+  redirectWithFlashToast(stringField(formData, "return_path") || "/batches", {
+    title: "Batch archived",
+    message: "The batch has been moved out of the active list.",
+    tone: "archive",
+  })
 }
 
 export async function assignStudentToBatch(batchId: string, formData: FormData) {
@@ -238,4 +250,10 @@ function batchPayload(data: BatchFormData) {
 
 function today() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function stringField(formData: FormData | undefined, key: string) {
+  const value = formData?.get(key)
+
+  return typeof value === "string" ? value.trim() : ""
 }

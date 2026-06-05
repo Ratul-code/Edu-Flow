@@ -1,10 +1,16 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import {
+  addMonths,
+  currentMonthStart,
+  monthStart,
+} from "@/lib/data/fees"
+import { ensureStudentMonthlyLedger } from "@/lib/actions/fees"
 import { createClient } from "@/lib/supabase/server"
+import { redirectWithFlashToast } from "@/lib/flash-toast"
 import {
   formatZodErrors,
   studentSchema,
@@ -26,6 +32,19 @@ export async function createStudent(
   }
 
   const data = result.data
+  let startingFeeMonth: string
+
+  try {
+    startingFeeMonth = studentFeeStartMonth(formData)
+  } catch (error) {
+    return {
+      message:
+        error instanceof Error
+          ? error.message
+          : "Select when the student should start paying fees.",
+    }
+  }
+
   const payload = buildStudentPayload(data, admin.tenantId)
 
   const { data: created, error } = await supabase
@@ -39,9 +58,15 @@ export async function createStudent(
   }
 
   await syncStudentBatchAssignments(admin.tenantId, created.id, formData)
+  await ensureStudentMonthlyLedger(created.id, startingFeeMonth)
 
   revalidatePath("/students")
-  redirect(`/students/${created.id}`)
+  revalidatePath("/fees")
+  redirectWithFlashToast(`/students/${created.id}`, {
+    title: "Student added",
+    message: `${data.name} has been added and the fee start month is ready.`,
+    tone: "success",
+  })
 }
 
 export async function updateStudent(
@@ -65,12 +90,18 @@ export async function updateStudent(
 
   await syncStudentBatchAssignments(admin.tenantId, studentId, formData)
 
+  const returnPath = stringField(formData, "return_path") || `/students/${studentId}`
+
   revalidatePath("/students")
   revalidatePath(`/students/${studentId}`)
-  redirect(`/students/${studentId}`)
+  redirectWithFlashToast(returnPath, {
+    title: "Student updated",
+    message: `${data.name}'s profile changes have been saved.`,
+    tone: "warning",
+  })
 }
 
-export async function archiveStudent(studentId: string) {
+export async function archiveStudent(studentId: string, formData?: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
   const { error } = await supabase
@@ -85,7 +116,11 @@ export async function archiveStudent(studentId: string) {
 
   revalidatePath("/students")
   revalidatePath(`/students/${studentId}`)
-  redirect("/students")
+  redirectWithFlashToast(stringField(formData, "return_path") || "/students", {
+    title: "Student archived",
+    message: "The student has been moved out of the active list.",
+    tone: "archive",
+  })
 }
 
 function buildStudentPayload(
@@ -102,7 +137,7 @@ function buildStudentPayload(
     phone: data.phone || null,
     guardian_name: data.guardian_name || null,
     guardian_phone: data.guardian_phone || null,
-    school: data.school || null,
+    institution: data.institution || null,
     class_level: data.class_level || null,
     medium: data.medium || null,
     group_name: data.group_name || null,
@@ -180,4 +215,30 @@ async function syncStudentBatchAssignments(
       revalidatePath(`/batches/${batchId}`)
     }
   }
+}
+
+function studentFeeStartMonth(formData: FormData) {
+  const option = stringField(formData, "fee_start_option")
+
+  if (option === "next") {
+    return addMonths(currentMonthStart(), 1)
+  }
+
+  if (option === "custom") {
+    const customMonth = stringField(formData, "fee_start_custom_month")
+
+    if (!/^\d{4}-\d{2}$/.test(customMonth)) {
+      throw new Error("Select a custom fee start month.")
+    }
+
+    return monthStart(customMonth)
+  }
+
+  return currentMonthStart()
+}
+
+function stringField(formData: FormData | undefined, key: string) {
+  const value = formData?.get(key)
+
+  return typeof value === "string" ? value.trim() : ""
 }

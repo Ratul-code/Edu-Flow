@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
 import { monthInputValue, monthStart } from "@/lib/data/fees"
+import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
   ledgerMonthSchema,
@@ -206,7 +207,14 @@ export async function recordTeacherSalaryPayment(
   }
 
   revalidatePath("/salaries")
-  redirect(`/salaries?month=${monthInputValue(ledger.ledger_month)}`)
+  redirectWithFlashToast(`/salaries?month=${monthInputValue(ledger.ledger_month)}`, {
+    title: nextDueAmount <= 0 ? "Salary fully paid" : "Partial salary recorded",
+    message:
+      nextDueAmount <= 0
+        ? "The teacher's salary ledger is now fully paid."
+        : "The salary payment was saved and the remaining due amount was updated.",
+    tone: nextDueAmount <= 0 ? "success" : "warning",
+  })
 }
 
 function salaryDue(

@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server"
 import { checkClassLevelsTableExists, listClassLevels } from "@/lib/data/class-levels"
 import { ClassLevelsManager } from "@/components/settings/class-levels-manager"
 import { Badge } from "@/components/ui/badge"
+import { BillingSettingsForm } from "@/components/settings/billing-settings-form"
+import { getBillingSettings } from "@/lib/data/fees"
 
 export default async function SettingsPage() {
   const admin = await requireAdminContext()
@@ -20,7 +22,10 @@ export default async function SettingsPage() {
     .single()
 
   const tableExists = await checkClassLevelsTableExists()
-  const classLevels = tableExists ? await listClassLevels(admin.tenantId) : []
+  const [billingSettings, classLevels] = await Promise.all([
+    getBillingSettings(admin.tenantId),
+    tableExists ? listClassLevels(admin.tenantId) : Promise.resolve([]),
+  ])
 
   return (
     <div className="mx-auto flex w-full max-w-full flex-col gap-6">
@@ -68,18 +73,21 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Right Side: Class Levels Configuration */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Academic Taxonomy</CardTitle>
-            <CardDescription>
-              Define levels, classes, or grades to categorize student groups.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ClassLevelsManager classLevels={classLevels} tableExists={tableExists} />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-6">
+          <BillingSettingsForm settings={billingSettings} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Academic Taxonomy</CardTitle>
+              <CardDescription>
+                Define levels, classes, or grades to categorize student groups.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClassLevelsManager classLevels={classLevels} tableExists={tableExists} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

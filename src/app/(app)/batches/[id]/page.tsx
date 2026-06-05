@@ -1,7 +1,8 @@
-import { ArchiveIcon, PencilIcon } from "lucide-react"
+import { PencilIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { StatusBadge } from "@/components/app/status-badge"
 import { BatchAssignmentForm } from "@/components/batches/batch-assignment-form"
@@ -95,12 +96,13 @@ export default async function BatchDetailPage({
           Edit batch
         </Button>
         {batch.status === "active" ? (
-          <form action={archiveBatch.bind(null, batch.id)}>
-            <Button type="submit" variant="outline">
-              <ArchiveIcon data-icon="inline-start" />
-              Archive
-            </Button>
-          </form>
+          <ArchiveConfirmDialog
+            action={archiveBatch.bind(null, batch.id)}
+            description={`This will archive ${batch.name} and remove it from active batch lists.`}
+            itemName="batch"
+            returnPath="/batches"
+            title="Archive batch?"
+          />
         ) : null}
       </div>
       <Card>

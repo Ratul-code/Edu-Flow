@@ -1,10 +1,9 @@
-import { ArchiveIcon } from "lucide-react"
 import { notFound } from "next/navigation"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { StatusBadge } from "@/components/app/status-badge"
 import { TeacherEditSheet } from "@/components/teachers/teacher-form"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -44,12 +43,13 @@ export default async function TeacherDetailPage({
           teacher={teacher}
         />
         {teacher.status === "active" ? (
-          <form action={archiveTeacher.bind(null, teacher.id)}>
-            <Button type="submit" variant="outline">
-              <ArchiveIcon data-icon="inline-start" />
-              Archive
-            </Button>
-          </form>
+          <ArchiveConfirmDialog
+            action={archiveTeacher.bind(null, teacher.id)}
+            description={`This will archive ${teacher.name} and remove them from active teacher lists.`}
+            itemName="teacher"
+            returnPath="/teachers"
+            title="Archive teacher?"
+          />
         ) : null}
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_0.75fr]">

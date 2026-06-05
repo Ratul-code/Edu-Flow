@@ -1,6 +1,7 @@
-import { ArchiveIcon, EyeIcon, PencilIcon } from "lucide-react"
+import { EyeIcon, PencilIcon } from "lucide-react"
 import Link from "next/link"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { archiveBatch } from "@/lib/actions/batches"
 import type { BatchRecord } from "@/lib/data/batches"
 import { StatusBadge } from "@/components/app/status-badge"
@@ -16,9 +17,13 @@ import {
 
 type BatchesTableProps = {
   batches: BatchRecord[]
+  currentPath?: string
 }
 
-export function BatchesTable({ batches }: BatchesTableProps) {
+export function BatchesTable({
+  batches,
+  currentPath = "/batches",
+}: BatchesTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -66,12 +71,14 @@ export function BatchesTable({ batches }: BatchesTableProps) {
                   <span className="sr-only">Edit batch</span>
                 </Button>
                 {batch.status === "active" ? (
-                  <form action={archiveBatch.bind(null, batch.id)}>
-                    <Button size="icon-sm" type="submit" variant="ghost">
-                      <ArchiveIcon />
-                      <span className="sr-only">Archive batch</span>
-                    </Button>
-                  </form>
+                  <ArchiveConfirmDialog
+                    action={archiveBatch.bind(null, batch.id)}
+                    description={`This will archive ${batch.name} and remove it from active batch lists.`}
+                    itemName="batch"
+                    returnPath={currentPath}
+                    title="Archive batch?"
+                    triggerSize="icon-sm"
+                  />
                 ) : null}
               </div>
             </TableCell>

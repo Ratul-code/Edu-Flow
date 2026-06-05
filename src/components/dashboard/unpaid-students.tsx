@@ -35,7 +35,7 @@ export function UnpaidStudents({ students }: UnpaidStudentsProps) {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Unpaid students will appear after monthly fee ledgers are generated.
+          Due students will appear after monthly fee ledgers are prepared.
         </p>
       )}
 
@@ -52,9 +52,9 @@ export function UnpaidStudents({ students }: UnpaidStudentsProps) {
         </DialogTrigger>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Unpaid Students</DialogTitle>
+            <DialogTitle>Due Students</DialogTitle>
             <DialogDescription>
-              Search current-month unpaid students by name, phone, or class.
+              Search current-month due students by name, phone, or class.
             </DialogDescription>
           </DialogHeader>
           <UnpaidStudentsModal students={students} />
@@ -134,7 +134,7 @@ function UnpaidStudentsModal({ students }: UnpaidStudentsProps) {
           </div>
         ) : (
           <p className="p-3 text-sm text-muted-foreground">
-            No unpaid students match these filters.
+            No due students match these filters.
           </p>
         )}
       </div>
@@ -158,7 +158,7 @@ function UnpaidStudentRow({ student }: { student: DueStudentLedger }) {
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-3 max-sm:basis-full max-sm:justify-end">
         <p className="text-sm font-semibold">{formatTaka(student.dueAmount)}</p>
-        <Badge variant="destructive">due</Badge>
+        <Badge variant="destructive">{student.status}</Badge>
         {student.studentId ? (
           <Button
             render={<Link href={`/students/${student.studentId}`} />}

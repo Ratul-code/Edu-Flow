@@ -1,6 +1,7 @@
-import { ArchiveIcon, EyeIcon } from "lucide-react"
+import { EyeIcon } from "lucide-react"
 import Link from "next/link"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { StatusBadge } from "@/components/app/status-badge"
 import { TeacherEditSheet } from "@/components/teachers/teacher-form"
 import { Button } from "@/components/ui/button"
@@ -16,10 +17,14 @@ import { archiveTeacher, updateTeacher } from "@/lib/actions/teachers"
 import type { TeacherRecord } from "@/lib/data/teachers"
 
 type TeachersTableProps = {
+  currentPath?: string
   teachers: TeacherRecord[]
 }
 
-export function TeachersTable({ teachers }: TeachersTableProps) {
+export function TeachersTable({
+  currentPath = "/teachers",
+  teachers,
+}: TeachersTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -57,17 +62,19 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                   <span className="sr-only">View teacher</span>
                 </Button>
                 <TeacherEditSheet
-                  action={updateTeacher.bind(null, teacher.id, "/teachers")}
+                  action={updateTeacher.bind(null, teacher.id, currentPath)}
                   teacher={teacher}
                   triggerVariant="icon"
                 />
                 {teacher.status === "active" ? (
-                  <form action={archiveTeacher.bind(null, teacher.id)}>
-                    <Button size="icon-sm" type="submit" variant="ghost">
-                      <ArchiveIcon />
-                      <span className="sr-only">Archive teacher</span>
-                    </Button>
-                  </form>
+                  <ArchiveConfirmDialog
+                    action={archiveTeacher.bind(null, teacher.id)}
+                    description={`This will archive ${teacher.name} and remove them from active teacher lists.`}
+                    itemName="teacher"
+                    returnPath={currentPath}
+                    title="Archive teacher?"
+                    triggerSize="icon-sm"
+                  />
                 ) : null}
               </div>
             </TableCell>

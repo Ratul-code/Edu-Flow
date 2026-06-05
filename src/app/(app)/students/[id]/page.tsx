@@ -1,10 +1,10 @@
-import { ArchiveIcon, PencilIcon } from "lucide-react"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { PageHeader } from "@/components/app/page-header"
 import { StatusBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
+import { StudentEditSheet } from "@/components/students/student-form"
+import { StudentFeeHistory } from "@/components/students/student-fee-history"
 import {
   Card,
   CardContent,
@@ -12,9 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { archiveStudent } from "@/lib/actions/students"
+import { updateStudent, archiveStudent } from "@/lib/actions/students"
 import { requireAdminContext } from "@/lib/auth/user"
-import { getStudentById } from "@/lib/data/students"
+import { listBatches } from "@/lib/data/batches"
+import { getStudentFeeHistory } from "@/lib/data/fees"
+import { getStudentById, listStudentBatchIds } from "@/lib/data/students"
 
 type StudentDetailPageProps = {
   params: Promise<{ id: string }>
@@ -25,11 +27,21 @@ export default async function StudentDetailPage({
 }: StudentDetailPageProps) {
   const admin = await requireAdminContext()
   const { id } = await params
-  const student = await getStudentById(admin.tenantId, id)
+  const [student, batches, assignedBatchIds] = await Promise.all([
+    getStudentById(admin.tenantId, id),
+    listBatches(admin.tenantId, { status: "active" }),
+    listStudentBatchIds(admin.tenantId, id),
+  ])
 
   if (!student) {
     notFound()
   }
+
+  const feeHistory = await getStudentFeeHistory(
+    admin.tenantId,
+    student.id,
+    student.admission_date
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,17 +51,21 @@ export default async function StudentDetailPage({
         title={student.name}
       />
       <div className="flex flex-wrap gap-2">
-        <Button render={<Link href={`/students/${student.id}/edit`} />}>
-          <PencilIcon data-icon="inline-start" />
-          Edit student
-        </Button>
+        <StudentEditSheet
+          action={updateStudent.bind(null, student.id)}
+          assignedBatchIds={assignedBatchIds}
+          batches={batches}
+          returnPath={`/students/${student.id}`}
+          student={student}
+        />
         {student.status === "active" ? (
-          <form action={archiveStudent.bind(null, student.id)}>
-            <Button type="submit" variant="outline">
-              <ArchiveIcon data-icon="inline-start" />
-              Archive
-            </Button>
-          </form>
+          <ArchiveConfirmDialog
+            action={archiveStudent.bind(null, student.id)}
+            description={`This will archive ${student.name} and remove them from active student lists.`}
+            itemName="student"
+            returnPath="/students"
+            title="Archive student?"
+          />
         ) : null}
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_0.75fr]">
@@ -63,7 +79,7 @@ export default async function StudentDetailPage({
             <DetailItem label="Class level" value={student.class_level} />
             <DetailItem label="Medium" value={student.medium} />
             <DetailItem label="Group" value={student.group_name} />
-            <DetailItem label="School" value={student.school} />
+            <DetailItem label="Institution" value={student.institution} />
             <DetailItem
               label="Admission date"
               value={formatDate(student.admission_date)}
@@ -88,6 +104,7 @@ export default async function StudentDetailPage({
             <DetailItem label="Guardian phone" value={student.guardian_phone} />
           </CardContent>
         </Card>
+        <StudentFeeHistory history={feeHistory} />
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Notes</CardTitle>

@@ -75,7 +75,7 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
             mediums={mediums}
           />
           {batches.length ? (
-            <BatchesTable batches={batches} />
+            <BatchesTable batches={batches} currentPath={pageHref(params)} />
           ) : (
             <Empty>
               <EmptyHeader>
@@ -94,6 +94,20 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
       </Card>
     </div>
   )
+}
+
+function pageHref(params: Record<string, string | string[] | undefined>) {
+  const nextParams = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value.trim()) {
+      nextParams.set(key, value)
+    }
+  }
+
+  const query = nextParams.toString()
+
+  return query ? `/batches?${query}` : "/batches"
 }
 
 function stringParam(value: string | string[] | undefined) {

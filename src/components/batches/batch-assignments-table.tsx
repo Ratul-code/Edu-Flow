@@ -1,5 +1,7 @@
-import { ArchiveIcon } from "lucide-react"
+import { CalculatorIcon } from "lucide-react"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
+import { recalculateCurrentStudentMonthlyLedger } from "@/lib/actions/fees"
 import {
   archiveStudentBatch,
   updateStudentBatchFeeOverride,
@@ -80,20 +82,35 @@ export function BatchAssignmentsTable({
               <StatusBadge status={assignment.status} />
             </TableCell>
             <TableCell>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 {assignment.status === "active" ? (
                   <form
+                    action={recalculateCurrentStudentMonthlyLedger.bind(
+                      null,
+                      assignment.student_id,
+                      `/batches/${batch.id}`
+                    )}
+                  >
+                    <Button size="icon-sm" type="submit" variant="ghost">
+                      <CalculatorIcon />
+                      <span className="sr-only">
+                        Recalculate current month fee
+                      </span>
+                    </Button>
+                  </form>
+                ) : null}
+                {assignment.status === "active" ? (
+                  <ArchiveConfirmDialog
                     action={archiveStudentBatch.bind(
                       null,
                       batch.id,
                       assignment.id
                     )}
-                  >
-                    <Button size="icon-sm" type="submit" variant="ghost">
-                      <ArchiveIcon />
-                      <span className="sr-only">Archive assignment</span>
-                    </Button>
-                  </form>
+                    description={`This will remove ${assignment.student?.name ?? "this student"} from the active assignments for ${batch.name}.`}
+                    itemName="assignment"
+                    title="Archive assignment?"
+                    triggerSize="icon-sm"
+                  />
                 ) : null}
               </div>
             </TableCell>

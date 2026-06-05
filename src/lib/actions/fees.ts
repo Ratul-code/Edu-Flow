@@ -4,9 +4,18 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
-import { monthInputValue, monthStart } from "@/lib/data/fees"
+import {
+  currentMonthStart,
+  getBillingSettings,
+  ledgerBillingWindow,
+  ledgerStatusForAmounts,
+  monthInputValue,
+  monthStart,
+} from "@/lib/data/fees"
+import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
+  billingSettingsSchema,
   feePaymentSchema,
   ledgerMonthSchema,
   parseFormData,
@@ -45,84 +54,265 @@ export async function generateStudentMonthlyLedgers(formData: FormData) {
   const { month } = parseFormData(ledgerMonthSchema, formData)
   const ledgerMonth = monthStart(month)
 
-  const [{ data: students, error: studentsError }, { data: assignments, error }] =
-    await Promise.all([
+  const [
+    settings,
+    { data: students, error: studentsError },
+    { data: assignments, error },
+    { data: existing, error: existingError },
+  ] = await Promise.all([
+    getBillingSettings(admin.tenantId),
+    supabase
+      .from("students")
+      .select("id")
+      .eq("tenant_id", admin.tenantId)
+      .eq("status", "active"),
+    supabase
+      .from("student_batches")
+      .select(
+        `
+          student_id,
+          custom_fee_override,
+          fee_override,
+          discount_amount,
+          batch:batches (
+            monthly_fee,
+            status
+          )
+        `
+      )
+      .eq("tenant_id", admin.tenantId)
+      .eq("status", "active"),
       supabase
-        .from("students")
-        .select("id")
+        .from("student_monthly_ledgers")
+        .select("id, student_id, paid_amount")
         .eq("tenant_id", admin.tenantId)
-        .eq("status", "active"),
-      supabase
-        .from("student_batches")
-        .select(
-          `
-            student_id,
-            custom_fee_override,
-            fee_override,
-            discount_amount,
-            batch:batches (
-              monthly_fee,
-              status
-            )
-          `
-        )
-        .eq("tenant_id", admin.tenantId)
-        .eq("status", "active"),
-    ])
+        .eq("ledger_month", ledgerMonth),
+  ])
 
-  if (studentsError || error) {
-    throw new Error(studentsError?.message ?? error?.message)
-  }
-
-  const { data: existing, error: existingError } = await supabase
-    .from("student_monthly_ledgers")
-    .select("id, student_id, paid_amount")
-    .eq("tenant_id", admin.tenantId)
-    .eq("ledger_month", ledgerMonth)
-
-  if (existingError) {
-    throw new Error(existingError.message)
+  if (studentsError || error || existingError) {
+    throw new Error(studentsError?.message ?? error?.message ?? existingError?.message)
   }
 
   const assignmentMap = groupAssignments(assignments as FeeAssignment[])
-  const paidByStudent = new Map(
-    ((existing ?? []) as ExistingLedger[]).map((ledger) => [
-      ledger.student_id,
-      money(ledger.paid_amount),
-    ])
+  const existingStudentIds = new Set(
+    ((existing ?? []) as ExistingLedger[]).map((ledger) => ledger.student_id)
   )
+  const window = ledgerBillingWindow(ledgerMonth, settings)
 
-  const ledgers = ((students ?? []) as ActiveStudent[]).map((student) => {
-    const totals = calculateStudentTotals(assignmentMap.get(student.id) ?? [])
-    const paidAmount = paidByStudent.get(student.id) ?? 0
-    const netAmount = Math.max(totals.expectedAmount - totals.discountAmount, 0)
-    const dueAmount = Math.max(netAmount - paidAmount, 0)
-
-    return {
-      tenant_id: admin.tenantId,
-      student_id: student.id,
-      ledger_month: ledgerMonth,
-      expected_amount: totals.expectedAmount,
-      discount_amount: totals.discountAmount,
-      paid_amount: paidAmount,
-      due_amount: dueAmount,
-      status: ledgerStatus(netAmount, paidAmount, dueAmount),
-      generated_at: new Date().toISOString(),
+  const ledgers = ((students ?? []) as ActiveStudent[]).flatMap((student) => {
+    if (existingStudentIds.has(student.id)) {
+      return []
     }
+
+    return [
+      studentLedgerPayload({
+        assignments: assignmentMap.get(student.id) ?? [],
+        ledgerMonth,
+        studentId: student.id,
+        tenantId: admin.tenantId,
+        window,
+      }),
+    ]
   })
 
   if (ledgers.length) {
-    const { error: upsertError } = await supabase
+    const { error: insertError } = await supabase
       .from("student_monthly_ledgers")
-      .upsert(ledgers, { onConflict: "tenant_id,student_id,ledger_month" })
+      .upsert(ledgers, {
+        ignoreDuplicates: true,
+        onConflict: "tenant_id,student_id,ledger_month",
+      })
 
-    if (upsertError) {
-      throw new Error(upsertError.message)
+    if (insertError) {
+      throw new Error(insertError.message)
     }
   }
 
   revalidatePath("/fees")
   redirect(`/fees?month=${monthInputValue(ledgerMonth)}`)
+}
+
+export async function ensureStudentMonthlyLedger(
+  studentId: string,
+  billingMonth: string
+) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const ledgerMonth = monthStart(billingMonth)
+
+  const { data: existing, error: existingError } = await supabase
+    .from("student_monthly_ledgers")
+    .select("id")
+    .eq("tenant_id", admin.tenantId)
+    .eq("student_id", studentId)
+    .eq("ledger_month", ledgerMonth)
+    .maybeSingle()
+
+  if (existingError) {
+    throw new Error(existingError.message)
+  }
+
+  if (existing) {
+    return existing
+  }
+
+  const [{ data: assignments, error }, settings] = await Promise.all([
+    supabase
+      .from("student_batches")
+      .select(
+        `
+          student_id,
+          custom_fee_override,
+          fee_override,
+          discount_amount,
+          batch:batches (
+            monthly_fee,
+            status
+          )
+        `
+      )
+      .eq("tenant_id", admin.tenantId)
+      .eq("student_id", studentId)
+      .eq("status", "active"),
+    getBillingSettings(admin.tenantId),
+  ])
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const window = ledgerBillingWindow(ledgerMonth, settings)
+  const { data, error: insertError } = await supabase
+    .from("student_monthly_ledgers")
+    .upsert(
+      studentLedgerPayload({
+        assignments: (assignments ?? []) as FeeAssignment[],
+        ledgerMonth,
+        studentId,
+        tenantId: admin.tenantId,
+        window,
+      }),
+      {
+        ignoreDuplicates: true,
+        onConflict: "tenant_id,student_id,ledger_month",
+      }
+    )
+    .select("id")
+    .single()
+
+  if (insertError || !data) {
+    throw new Error(insertError?.message ?? "Could not create student ledger.")
+  }
+
+  revalidatePath("/fees")
+
+  return data
+}
+
+export async function recalculateCurrentStudentMonthlyLedger(
+  studentId: string,
+  returnPath = "/students"
+) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const ledgerMonth = currentMonthStart()
+  const ledger = await ensureStudentMonthlyLedger(studentId, ledgerMonth)
+  const [{ data, error }, settings] = await Promise.all([
+    supabase
+      .from("student_batches")
+      .select(
+        `
+          student_id,
+          custom_fee_override,
+          fee_override,
+          discount_amount,
+          batch:batches (
+            monthly_fee,
+            status
+          )
+        `
+      )
+      .eq("tenant_id", admin.tenantId)
+      .eq("student_id", studentId)
+      .eq("status", "active"),
+    getBillingSettings(admin.tenantId),
+  ])
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("student_monthly_ledgers")
+    .select("id, paid_amount")
+    .eq("tenant_id", admin.tenantId)
+    .eq("id", ledger.id)
+    .maybeSingle()
+
+  if (existingError || !existing) {
+    throw new Error(existingError?.message ?? "Ledger not found.")
+  }
+
+  const totals = calculateStudentTotals((data ?? []) as FeeAssignment[])
+  const paidAmount = money(existing.paid_amount)
+  const netAmount = Math.max(totals.expectedAmount - totals.discountAmount, 0)
+  const dueAmount = Math.max(netAmount - paidAmount, 0)
+  const window = ledgerBillingWindow(ledgerMonth, settings)
+
+  const { error: updateError } = await supabase
+    .from("student_monthly_ledgers")
+    .update({
+      due_amount: dueAmount,
+      expected_amount: totals.expectedAmount,
+      discount_amount: totals.discountAmount,
+      grace_end_date: window.grace_end_date,
+      payment_start_date: window.payment_start_date,
+      status: ledgerStatusForAmounts({
+        discountAmount: totals.discountAmount,
+        dueAmount,
+        expectedAmount: totals.expectedAmount,
+        graceEndDate: window.grace_end_date,
+        paidAmount,
+        paymentStartDate: window.payment_start_date,
+      }),
+    })
+    .eq("tenant_id", admin.tenantId)
+    .eq("id", ledger.id)
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+
+  revalidatePath("/fees")
+  revalidatePath("/dashboard")
+  revalidatePath(`/students/${studentId}`)
+  revalidatePath(returnPath)
+}
+
+export async function updateBillingSettings(formData: FormData) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const settings = parseFormData(billingSettingsSchema, formData)
+
+  const { error } = await supabase.from("billing_settings").upsert(
+    {
+      tenant_id: admin.tenantId,
+      ...settings,
+    },
+    { onConflict: "tenant_id" }
+  )
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/settings")
+  revalidatePath("/fees")
+  redirectWithFlashToast("/settings", {
+    title: "Settings saved",
+    message: "The fee payment window has been updated.",
+    tone: "success",
+  })
 }
 
 export async function recordStudentPayment(ledgerId: string, formData: FormData) {
@@ -152,7 +342,7 @@ async function saveStudentPayment(
   const { data: ledger, error: ledgerError } = await supabase
     .from("student_monthly_ledgers")
     .select(
-      "id, tenant_id, student_id, ledger_month, expected_amount, discount_amount, paid_amount, due_amount"
+      "id, tenant_id, student_id, ledger_month, expected_amount, discount_amount, paid_amount, due_amount, payment_start_date, grace_end_date"
     )
     .eq("tenant_id", admin.tenantId)
     .eq("id", ledgerId)
@@ -199,7 +389,14 @@ async function saveStudentPayment(
     .update({
       paid_amount: paidAmount,
       due_amount: nextDueAmount,
-      status: ledgerStatus(netAmount, paidAmount, nextDueAmount),
+      status: ledgerStatusForAmounts({
+        discountAmount: money(ledger.discount_amount),
+        dueAmount: nextDueAmount,
+        expectedAmount: money(ledger.expected_amount),
+        graceEndDate: ledger.grace_end_date,
+        paidAmount,
+        paymentStartDate: ledger.payment_start_date,
+      }),
     })
     .eq("tenant_id", admin.tenantId)
     .eq("id", ledger.id)
@@ -210,12 +407,23 @@ async function saveStudentPayment(
 
   revalidatePath("/fees")
   revalidatePath("/dashboard")
+  const flashToast = {
+    title: nextDueAmount <= 0 ? "Fee fully paid" : "Partial fee recorded",
+    message:
+      nextDueAmount <= 0
+        ? "The student's monthly fee is now fully paid."
+        : "The payment was saved and the remaining due amount was updated.",
+    tone: nextDueAmount <= 0 ? "success" : "warning",
+  } as const
 
   if (redirectTarget === "dashboard") {
-    redirect("/dashboard")
+    redirectWithFlashToast("/dashboard", flashToast)
   }
 
-  redirect(`/fees?month=${monthInputValue(ledger.ledger_month)}`)
+  redirectWithFlashToast(
+    `/fees?month=${monthInputValue(ledger.ledger_month)}`,
+    flashToast
+  )
 }
 
 function groupAssignments(assignments: FeeAssignment[]) {
@@ -257,16 +465,47 @@ function calculateStudentTotals(assignments: FeeAssignment[]) {
   }
 }
 
-function ledgerStatus(netAmount: number, paidAmount: number, dueAmount: number) {
-  if (netAmount <= 0) {
-    return "waived"
+function studentLedgerPayload({
+  assignments,
+  ledgerMonth,
+  studentId,
+  tenantId,
+  window,
+}: {
+  assignments: FeeAssignment[]
+  ledgerMonth: string
+  studentId: string
+  tenantId: string
+  window: {
+    grace_end_date: string
+    payment_start_date: string
   }
+}) {
+  const totals = calculateStudentTotals(assignments)
+  const paidAmount = 0
+  const netAmount = Math.max(totals.expectedAmount - totals.discountAmount, 0)
+  const dueAmount = netAmount
 
-  if (dueAmount <= 0) {
-    return "paid"
+  return {
+    tenant_id: tenantId,
+    student_id: studentId,
+    ledger_month: ledgerMonth,
+    expected_amount: totals.expectedAmount,
+    discount_amount: totals.discountAmount,
+    paid_amount: paidAmount,
+    due_amount: dueAmount,
+    status: ledgerStatusForAmounts({
+      discountAmount: totals.discountAmount,
+      dueAmount,
+      expectedAmount: totals.expectedAmount,
+      graceEndDate: window.grace_end_date,
+      paidAmount,
+      paymentStartDate: window.payment_start_date,
+    }),
+    payment_start_date: window.payment_start_date,
+    grace_end_date: window.grace_end_date,
+    generated_at: new Date().toISOString(),
   }
-
-  return paidAmount > 0 ? "partial" : "unpaid"
 }
 
 function receiptNumber(ledgerMonth: string) {

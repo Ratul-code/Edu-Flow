@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { StudentCreateSheetClient } from "@/components/students/student-create-sheet-client"
+import { StudentEditSheetClient } from "@/components/students/student-edit-sheet-client"
 import { StudentFields } from "@/components/students/student-fields"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +19,7 @@ import {
   listClassLevels,
 } from "@/lib/data/class-levels"
 import type { StudentRecord } from "@/lib/data/students"
+import { currentMonthStart, monthInputValue } from "@/lib/data/fees"
 import type { FormState } from "@/lib/schemas"
 
 type StudentFormProps = {
@@ -90,9 +92,41 @@ export async function StudentCreateSheet({
       action={action}
       batches={batches}
       classLevels={classLevels}
+      defaultFeeStartMonth={monthInputValue(currentMonthStart())}
       tableExists={tableExists}
       triggerLabel={triggerLabel}
       triggerVariant={triggerVariant}
+    />
+  )
+}
+
+export async function StudentEditSheet({
+  action,
+  assignedBatchIds = [],
+  batches = [],
+  student,
+  returnPath,
+  triggerSize = "default",
+}: {
+  action: (formData: FormData) => void | Promise<void>
+  assignedBatchIds?: string[]
+  batches?: BatchRecord[]
+  returnPath?: string
+  student: StudentRecord
+  triggerSize?: "default" | "icon-sm"
+}) {
+  const { classLevels, tableExists } = await getClassLevelOptions()
+
+  return (
+    <StudentEditSheetClient
+      action={action}
+      assignedBatchIds={assignedBatchIds}
+      batches={batches}
+      classLevels={classLevels}
+      returnPath={returnPath}
+      student={student}
+      tableExists={tableExists}
+      triggerSize={triggerSize}
     />
   )
 }

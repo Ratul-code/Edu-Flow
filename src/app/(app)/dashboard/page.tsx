@@ -127,7 +127,7 @@ export default async function DashboardPage() {
       <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
         <Card className="min-h-80">
           <CardHeader>
-            <CardTitle>Unpaid Students</CardTitle>
+            <CardTitle>Due Students</CardTitle>
           </CardHeader>
           <CardContent>
             <UnpaidStudents students={dueLedgers} />

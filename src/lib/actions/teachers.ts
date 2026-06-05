@@ -1,9 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
   formatZodErrors,
@@ -38,7 +38,11 @@ export async function createTeacher(
   }
 
   revalidatePath("/teachers")
-  redirect(`/teachers/${data.id}`)
+  redirectWithFlashToast(`/teachers/${data.id}`, {
+    title: "Teacher added",
+    message: `${result.data.name} has been added to your teacher list.`,
+    tone: "success",
+  })
 }
 
 export async function updateTeacher(
@@ -67,10 +71,14 @@ export async function updateTeacher(
 
   revalidatePath("/teachers")
   revalidatePath(`/teachers/${teacherId}`)
-  redirect(redirectPath)
+  redirectWithFlashToast(redirectPath, {
+    title: "Teacher updated",
+    message: `${result.data.name}'s teacher profile has been saved.`,
+    tone: "warning",
+  })
 }
 
-export async function archiveTeacher(teacherId: string) {
+export async function archiveTeacher(teacherId: string, formData?: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
   const { error } = await supabase
@@ -85,7 +93,17 @@ export async function archiveTeacher(teacherId: string) {
 
   revalidatePath("/teachers")
   revalidatePath(`/teachers/${teacherId}`)
-  redirect("/teachers")
+  redirectWithFlashToast(stringField(formData, "return_path") || "/teachers", {
+    title: "Teacher archived",
+    message: "The teacher has been moved out of the active list.",
+    tone: "archive",
+  })
+}
+
+function stringField(formData: FormData | undefined, key: string) {
+  const value = formData?.get(key)
+
+  return typeof value === "string" ? value.trim() : ""
 }
 
 function teacherPayload(data: TeacherFormData) {

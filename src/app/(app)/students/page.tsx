@@ -19,6 +19,7 @@ import {
   listStudentClassLevels,
   listStudentGroups,
   listStudentMediums,
+  listStudentBatchIds,
   listStudentTags,
   listStudentsPage,
   type StudentStatus,
@@ -64,6 +65,15 @@ export default async function StudentsPage({
     redirect(pageHref(params, totalPages))
   }
 
+  const assignedBatchIdsByStudent = Object.fromEntries(
+    await Promise.all(
+      students.map(async (student) => [
+        student.id,
+        await listStudentBatchIds(admin.tenantId, student.id),
+      ])
+    )
+  )
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -94,7 +104,12 @@ export default async function StudentsPage({
           />
           {students.length ? (
             <>
-              <StudentsTable students={students} />
+              <StudentsTable
+                assignedBatchIdsByStudent={assignedBatchIdsByStudent}
+                batches={batches}
+                currentPath={pageHref(params, page)}
+                students={students}
+              />
               <StudentsPagination
                 currentPage={page}
                 pageSize={studentsPerPage}

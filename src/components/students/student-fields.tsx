@@ -4,6 +4,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
+import { FeeStartControls } from "@/components/students/fee-start-controls"
 import { Input } from "@/components/ui/input"
 import { TagInput } from "@/components/ui/tag-input"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,7 +16,9 @@ type StudentFieldsProps = {
   assignedBatchIds?: string[]
   batches?: BatchRecord[]
   classLevels: ClassLevelRecord[]
+  defaultFeeStartMonth?: string
   errors?: Record<string, string | string[]>
+  showFeeStartControls?: boolean
   student?: StudentRecord
   tableExists: boolean
 }
@@ -24,7 +27,9 @@ export function StudentFields({
   assignedBatchIds = [],
   batches = [],
   classLevels,
+  defaultFeeStartMonth,
   errors,
+  showFeeStartControls = false,
   student,
   tableExists,
 }: StudentFieldsProps) {
@@ -72,15 +77,15 @@ export function StudentFields({
         />
         <FieldError>{fieldError(errors?.guardian_phone)}</FieldError>
       </Field>
-      <Field data-invalid={Boolean(errors?.school)}>
-        <FieldLabel htmlFor="school">School</FieldLabel>
+      <Field data-invalid={Boolean(errors?.institution)}>
+        <FieldLabel htmlFor="institution">Institution</FieldLabel>
         <Input
-          id="school"
-          name="school"
-          aria-invalid={Boolean(errors?.school)}
-          defaultValue={student?.school ?? ""}
+          id="institution"
+          name="institution"
+          aria-invalid={Boolean(errors?.institution)}
+          defaultValue={student?.institution ?? ""}
         />
-        <FieldError>{fieldError(errors?.school)}</FieldError>
+        <FieldError>{fieldError(errors?.institution)}</FieldError>
       </Field>
       <Field data-invalid={Boolean(errors?.class_level)}>
         <FieldLabel htmlFor="class_level">Class level</FieldLabel>
@@ -202,6 +207,9 @@ export function StudentFields({
             ))}
           </div>
         </Field>
+      ) : null}
+      {showFeeStartControls ? (
+        <FeeStartControls defaultMonth={defaultFeeStartMonth} />
       ) : null}
       <Field className="sm:col-span-2" data-invalid={Boolean(errors?.notes)}>
         <FieldLabel htmlFor="notes">Notes</FieldLabel>

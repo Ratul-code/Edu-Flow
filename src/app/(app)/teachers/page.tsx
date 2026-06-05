@@ -53,7 +53,7 @@ export default async function TeachersPage({
         <CardContent className="flex flex-col gap-4">
           <TeacherListFilters filters={filters} />
           {teachers.length ? (
-            <TeachersTable teachers={teachers} />
+            <TeachersTable currentPath={pageHref(params)} teachers={teachers} />
           ) : (
             <Empty>
               <EmptyHeader>
@@ -69,6 +69,20 @@ export default async function TeachersPage({
       </Card>
     </div>
   )
+}
+
+function pageHref(params: Record<string, string | string[] | undefined>) {
+  const nextParams = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value.trim()) {
+      nextParams.set(key, value)
+    }
+  }
+
+  const query = nextParams.toString()
+
+  return query ? `/teachers?${query}` : "/teachers"
 }
 
 function stringParam(value: string | string[] | undefined) {

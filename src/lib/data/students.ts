@@ -9,7 +9,7 @@ export type StudentRecord = {
   phone: string | null
   guardian_name: string | null
   guardian_phone: string | null
-  school: string | null
+  institution: string | null
   class_level: string | null
   medium: string | null
   group_name: string | null
@@ -47,7 +47,7 @@ const studentSelect = `
   phone,
   guardian_name,
   guardian_phone,
-  school,
+  institution,
   class_level,
   medium,
   group_name,

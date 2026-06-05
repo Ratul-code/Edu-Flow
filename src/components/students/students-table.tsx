@@ -1,7 +1,11 @@
-import { ArchiveIcon, EyeIcon, PencilIcon } from "lucide-react"
+import { EyeIcon } from "lucide-react"
 import Link from "next/link"
 
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { archiveStudent } from "@/lib/actions/students"
+import { updateStudent } from "@/lib/actions/students"
+import { StudentEditSheet } from "@/components/students/student-form"
+import type { BatchRecord } from "@/lib/data/batches"
 import type { StudentRecord } from "@/lib/data/students"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/app/status-badge"
@@ -15,20 +19,29 @@ import {
 } from "@/components/ui/table"
 
 type StudentsTableProps = {
+  assignedBatchIdsByStudent?: Record<string, string[]>
+  batches?: BatchRecord[]
+  currentPath?: string
   students: StudentRecord[]
 }
 
-export function StudentsTable({ students }: StudentsTableProps) {
+export function StudentsTable({
+  assignedBatchIdsByStudent = {},
+  batches = [],
+  currentPath = "/students",
+  students,
+}: StudentsTableProps) {
+  const batchById = new Map(batches.map((batch) => [batch.id, batch]))
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Phone</TableHead>
-          <TableHead>Guardian</TableHead>
           <TableHead>Class</TableHead>
           <TableHead>Medium</TableHead>
           <TableHead>Group</TableHead>
+          <TableHead>Batch</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -47,12 +60,19 @@ export function StudentsTable({ students }: StudentsTableProps) {
               <Link className="hover:underline" href={`/students/${student.id}`}>
                 {student.name}
               </Link>
+              <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                {student.phone || "No phone"}
+              </span>
             </TableCell>
-            <TableCell>{student.phone || "-"}</TableCell>
-            <TableCell>{student.guardian_name || "-"}</TableCell>
             <TableCell>{student.class_level || "-"}</TableCell>
             <TableCell>{student.medium || "-"}</TableCell>
             <TableCell>{student.group_name || "-"}</TableCell>
+            <TableCell>
+              <BatchChips
+                batchIds={assignedBatchIdsByStudent[student.id] ?? []}
+                batchById={batchById}
+              />
+            </TableCell>
             <TableCell>
               <StatusBadge status={student.status} />
             </TableCell>
@@ -66,21 +86,23 @@ export function StudentsTable({ students }: StudentsTableProps) {
                   <EyeIcon />
                   <span className="sr-only">View student</span>
                 </Button>
-                <Button
-                  render={<Link href={`/students/${student.id}/edit`} />}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <PencilIcon />
-                  <span className="sr-only">Edit student</span>
-                </Button>
+                <StudentEditSheet
+                  action={updateStudent.bind(null, student.id)}
+                  assignedBatchIds={assignedBatchIdsByStudent[student.id] ?? []}
+                  batches={batches}
+                  returnPath={currentPath}
+                  student={student}
+                  triggerSize="icon-sm"
+                />
                 {student.status === "active" ? (
-                  <form action={archiveStudent.bind(null, student.id)}>
-                    <Button size="icon-sm" type="submit" variant="ghost">
-                      <ArchiveIcon />
-                      <span className="sr-only">Archive student</span>
-                    </Button>
-                  </form>
+                  <ArchiveConfirmDialog
+                    action={archiveStudent.bind(null, student.id)}
+                    description={`This will archive ${student.name} and remove them from active student lists.`}
+                    itemName="student"
+                    returnPath={currentPath}
+                    title="Archive student?"
+                    triggerSize="icon-sm"
+                  />
                 ) : null}
               </div>
             </TableCell>
@@ -88,5 +110,34 @@ export function StudentsTable({ students }: StudentsTableProps) {
         ))}
       </TableBody>
     </Table>
+  )
+}
+
+function BatchChips({
+  batchById,
+  batchIds,
+}: {
+  batchById: Map<string, BatchRecord>
+  batchIds: string[]
+}) {
+  const batches = batchIds
+    .map((batchId) => batchById.get(batchId))
+    .filter((batch): batch is BatchRecord => Boolean(batch))
+
+  if (!batches.length) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  return (
+    <div className="flex max-w-64 flex-wrap gap-1.5">
+      {batches.map((batch) => (
+        <span
+          className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+          key={batch.id}
+        >
+          {batch.name}
+        </span>
+      ))}
+    </div>
   )
 }

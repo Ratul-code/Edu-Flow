@@ -1,9 +1,7 @@
-import { ArchiveIcon } from "lucide-react"
-
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { archiveClassSchedule } from "@/lib/actions/batches"
 import type { ClassScheduleRecord } from "@/lib/data/batches"
 import { StatusBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -59,18 +57,17 @@ export function ClassSchedulesTable({
             <TableCell>
               <div className="flex justify-end">
                 {schedule.status === "active" ? (
-                  <form
+                  <ArchiveConfirmDialog
                     action={archiveClassSchedule.bind(
                       null,
                       batchId,
                       schedule.id
                     )}
-                  >
-                    <Button size="icon-sm" type="submit" variant="ghost">
-                      <ArchiveIcon />
-                      <span className="sr-only">Archive schedule</span>
-                    </Button>
-                  </form>
+                    description="This will archive the selected class schedule and remove it from active weekly planning."
+                    itemName="schedule"
+                    title="Archive schedule?"
+                    triggerSize="icon-sm"
+                  />
                 ) : null}
               </div>
             </TableCell>

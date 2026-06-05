@@ -7,6 +7,8 @@ type PageHeaderProps = {
 }
 
 export function PageHeader({ title, description, badge }: PageHeaderProps) {
+  const isActive = badge?.toLowerCase() === "active"
+
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex flex-col gap-1">
@@ -16,7 +18,14 @@ export function PageHeader({ title, description, badge }: PageHeaderProps) {
         </p>
       </div>
       {badge ? (
-        <Badge className="mt-1" variant="outline">
+        <Badge
+          className={
+            isActive
+              ? "mt-1 border-emerald-200 bg-emerald-100 text-emerald-700"
+              : "mt-1"
+          }
+          variant="outline"
+        >
           {badge}
         </Badge>
       ) : null}
