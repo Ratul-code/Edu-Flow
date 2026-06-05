@@ -1,18 +1,18 @@
-import { FilterIcon, SearchIcon } from "lucide-react"
+import { FilterIcon, SearchIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import type { BatchRecord } from "@/lib/data/batches"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { BatchRecord } from "@/lib/data/batches";
 
 type FeeLedgerFiltersProps = {
-  batches: BatchRecord[]
+  batches: BatchRecord[];
   filters: {
-    batchId?: string
-    search?: string
-    status?: string
-  }
-  month: string
-}
+    batchId?: string;
+    search?: string;
+    status?: string;
+  };
+  month: string;
+};
 
 const statuses = [
   { label: "Overdue + due", value: "attention" },
@@ -23,7 +23,7 @@ const statuses = [
   { label: "Paid", value: "paid" },
   { label: "Not started", value: "not_started" },
   { label: "Waived", value: "waived" },
-]
+];
 
 export function FeeLedgerFilters({
   batches,
@@ -31,19 +31,19 @@ export function FeeLedgerFilters({
   month,
 }: FeeLedgerFiltersProps) {
   return (
-    <form className="grid gap-3 rounded-lg border bg-muted/20 p-3 lg:grid-cols-[1fr_170px_220px_auto]">
+    <form className="grid gap-3 rounded-lg bg-muted/20 p-3 lg:grid-cols-[1fr_170px_220px_auto]">
       <input name="month" type="hidden" value={month} />
       <div className="relative">
         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="pl-8"
+          className="pl-10 h-10 text-sm rounded-full"
           defaultValue={filters.search}
           name="q"
           placeholder="Search student, phone, or class"
         />
       </div>
       <select
-        className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-10 w-full rounded-xl border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         defaultValue={filters.status ?? "attention"}
         name="status"
       >
@@ -54,7 +54,7 @@ export function FeeLedgerFilters({
         ))}
       </select>
       <select
-        className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-10 w-full rounded-xl border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         defaultValue={filters.batchId ?? ""}
         name="batch"
       >
@@ -65,10 +65,10 @@ export function FeeLedgerFilters({
           </option>
         ))}
       </select>
-      <Button type="submit">
+      <Button className="h-10 px-4 text-sm rounded-xl" type="submit">
         <FilterIcon data-icon="inline-start" />
         Apply
       </Button>
     </form>
-  )
+  );
 }

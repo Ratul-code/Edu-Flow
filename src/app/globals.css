@@ -94,3 +94,17 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .cn-toast {
+    @apply shadow-lg;
+  }
+
+  .cn-toast [data-title] {
+    @apply font-semibold;
+  }
+
+  .cn-toast [data-description] {
+    @apply text-sm;
+  }
+}

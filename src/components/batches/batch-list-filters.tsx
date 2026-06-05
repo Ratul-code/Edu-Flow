@@ -1,21 +1,21 @@
-import { SearchIcon, XIcon } from "lucide-react"
-import Link from "next/link"
+import { SearchIcon, XIcon } from "lucide-react";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type BatchListFiltersProps = {
-  classLevels: string[]
+  classLevels: string[];
   filters: {
-    classLevel?: string
-    groupName?: string
-    medium?: string
-    search?: string
-    status?: string
-  }
-  groups: string[]
-  mediums: string[]
-}
+    classLevel?: string;
+    groupName?: string;
+    medium?: string;
+    search?: string;
+    status?: string;
+  };
+  groups: string[];
+  mediums: string[];
+};
 
 export function BatchListFilters({
   classLevels,
@@ -28,7 +28,7 @@ export function BatchListFilters({
       <div className="relative min-w-0 flex-1">
         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="pl-8"
+          className="h-10 pl-10 rounded-full text-sm"
           defaultValue={filters.search}
           name="q"
           placeholder="Search by batch name"
@@ -36,7 +36,7 @@ export function BatchListFilters({
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <select
-          className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-10 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           defaultValue={filters.classLevel ?? ""}
           name="classLevel"
         >
@@ -48,7 +48,7 @@ export function BatchListFilters({
           ))}
         </select>
         <select
-          className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-10 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           defaultValue={filters.medium ?? ""}
           name="medium"
         >
@@ -60,7 +60,7 @@ export function BatchListFilters({
           ))}
         </select>
         <select
-          className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-10 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           defaultValue={filters.groupName ?? ""}
           name="groupName"
         >
@@ -72,7 +72,7 @@ export function BatchListFilters({
           ))}
         </select>
         <select
-          className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-10 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           defaultValue={filters.status ?? "all"}
           name="status"
         >
@@ -80,15 +80,15 @@ export function BatchListFilters({
           <option value="active">Active</option>
           <option value="archived">Archived</option>
         </select>
-        <Button type="submit">
+        <Button type="submit" className={'h-10'}>
           <SearchIcon data-icon="inline-start" />
           Search
         </Button>
-        <Button render={<Link href="/batches" />} variant="outline">
+        <Button render={<Link href="/batches" />} variant="outline" className={'h-10'}>
           <XIcon data-icon="inline-start" />
           Clear
         </Button>
       </div>
     </form>
-  )
+  );
 }

@@ -32,6 +32,7 @@ export function ClassSchedulesTable({
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           <TableHead>Day</TableHead>
           <TableHead>Subject</TableHead>
           <TableHead>Time</TableHead>
@@ -42,8 +43,11 @@ export function ClassSchedulesTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {schedules.map((schedule) => (
+        {schedules.map((schedule, index) => (
           <TableRow key={schedule.id}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             <TableCell>{weekday(schedule.weekday)}</TableCell>
             <TableCell>{schedule.subject || "-"}</TableCell>
             <TableCell>

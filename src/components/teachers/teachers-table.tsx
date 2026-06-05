@@ -29,6 +29,7 @@ export function TeachersTable({
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           <TableHead>Name</TableHead>
           <TableHead>Phone</TableHead>
           <TableHead>Subject</TableHead>
@@ -38,8 +39,11 @@ export function TeachersTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {teachers.map((teacher) => (
+        {teachers.map((teacher, index) => (
           <TableRow key={teacher.id}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             <TableCell className="font-medium">
               <Link className="hover:underline" href={`/teachers/${teacher.id}`}>
                 {teacher.name}

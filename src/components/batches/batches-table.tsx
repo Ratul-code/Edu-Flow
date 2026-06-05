@@ -28,6 +28,7 @@ export function BatchesTable({
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           <TableHead>Batch</TableHead>
           <TableHead>Class</TableHead>
           <TableHead>Medium</TableHead>
@@ -38,8 +39,11 @@ export function BatchesTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {batches.map((batch) => (
+        {batches.map((batch, index) => (
           <TableRow key={batch.id}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             <TableCell className="font-medium">
               <Link className="hover:underline" href={`/batches/${batch.id}`}>
                 {batch.name}

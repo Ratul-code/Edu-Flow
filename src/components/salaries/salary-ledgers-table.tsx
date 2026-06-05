@@ -22,6 +22,7 @@ export function SalaryLedgersTable({ ledgers }: SalaryLedgersTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           <TableHead>Teacher</TableHead>
           <TableHead>Subject</TableHead>
           <TableHead>Expected</TableHead>
@@ -33,8 +34,11 @@ export function SalaryLedgersTable({ ledgers }: SalaryLedgersTableProps) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {ledgers.map((ledger) => (
+        {ledgers.map((ledger, index) => (
           <TableRow key={ledger.id}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             <TableCell className="font-medium">
               {ledger.teacher?.name ?? "Unknown teacher"}
               {ledger.teacher?.phone ? (

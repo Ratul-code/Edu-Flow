@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { feeStatusLabel, feeStatusRowClass } from "@/lib/fee-status"
+import { feeStatusLabel } from "@/lib/fee-status"
 import type { StudentFeeHistory as StudentFeeHistoryData } from "@/lib/data/fees"
 
 type StudentFeeHistoryProps = {
@@ -50,6 +50,7 @@ export function StudentFeeHistory({ history }: StudentFeeHistoryProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 text-center">#</TableHead>
               <TableHead>Month</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Expected</TableHead>
@@ -59,11 +60,11 @@ export function StudentFeeHistory({ history }: StudentFeeHistoryProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {history.months.map((month) => (
-              <TableRow
-                className={feeStatusRowClass(month.status)}
-                key={month.ledger_month}
-              >
+            {history.months.map((month, index) => (
+              <TableRow key={month.ledger_month}>
+                <TableCell className="text-center text-muted-foreground">
+                  {index + 1}
+                </TableCell>
                 <TableCell className="font-medium">
                   {formatMonth(month.ledger_month)}
                 </TableCell>

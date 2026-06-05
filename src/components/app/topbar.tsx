@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import Link from "next/link"
 import {
   BellIcon,
   ChevronDownIcon,
   SearchIcon,
-} from "lucide-react"
+} from "lucide-react";
+import Link from "next/link";
 
-import type { AdminContext } from "@/lib/auth/user"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { AdminContext } from "@/lib/auth/user";
 
-export function Topbar({ admin }: { admin: AdminContext }) {
+export function Topbar({ admin }: { admin: AdminContext; }) {
   return (
     <header className="flex h-[76px] shrink-0 items-center justify-between gap-4 border-b border-[#edf0f5] bg-white px-6">
       <div className="flex min-w-0 flex-1 items-center gap-5">
@@ -60,13 +60,13 @@ export function Topbar({ admin }: { admin: AdminContext }) {
         <ChevronDownIcon className="size-5 text-[#141821]" strokeWidth={1.9} />
       </div>
     </header>
-  )
+  );
 }
 
 function profileInitials(name: string) {
-  const parts = name.split(" ").filter(Boolean)
-  const first = parts[0]?.[0] ?? "A"
-  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : ""
+  const parts = name.split(" ").filter(Boolean);
+  const first = parts[0]?.[0] ?? "A";
+  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
 
-  return `${first}${last}`.toUpperCase()
+  return `${first}${last}`.toUpperCase();
 }

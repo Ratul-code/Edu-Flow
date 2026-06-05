@@ -37,6 +37,7 @@ export function StudentsTable({
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           <TableHead>Name</TableHead>
           <TableHead>Class</TableHead>
           <TableHead>Medium</TableHead>
@@ -48,16 +49,15 @@ export function StudentsTable({
       </TableHeader>
       <TableBody>
         {students.map((student, index) => (
-          <TableRow
-            className={
-              index % 2 === 0
-                ? "bg-white hover:bg-emerald-50"
-                : "bg-emerald-50/45 hover:bg-emerald-50"
-            }
-            key={student.id}
-          >
+          <TableRow key={student.id}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             <TableCell className="font-medium">
-              <Link className="hover:underline" href={`/students/${student.id}`}>
+              <Link
+                className="text-emerald-800 hover:underline"
+                href={`/students/${student.id}`}
+              >
                 {student.name}
               </Link>
               <span className="mt-0.5 block text-xs font-normal text-muted-foreground">

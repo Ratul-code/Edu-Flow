@@ -19,6 +19,7 @@ export function AdminDataTable({ columns, rows = [] }: AdminDataTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           {columns.map((column) => (
             <TableHead key={column.key}>{column.label}</TableHead>
           ))}
@@ -27,6 +28,9 @@ export function AdminDataTable({ columns, rows = [] }: AdminDataTableProps) {
       <TableBody>
         {rows.map((row, index) => (
           <TableRow key={`${row.id ?? "row"}-${index}`}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             {columns.map((column) => (
               <TableCell key={column.key}>
                 {column.key === "status" ? (

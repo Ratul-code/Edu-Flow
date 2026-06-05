@@ -58,7 +58,7 @@ export async function updateBatch(batchId: string, formData: FormData) {
   redirectWithFlashToast(`/batches/${batchId}`, {
     title: "Batch updated",
     message: `${payload.name} changes have been saved.`,
-    tone: "warning",
+    tone: "success",
   })
 }
 

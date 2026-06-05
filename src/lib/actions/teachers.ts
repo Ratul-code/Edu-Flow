@@ -74,7 +74,7 @@ export async function updateTeacher(
   redirectWithFlashToast(redirectPath, {
     title: "Teacher updated",
     message: `${result.data.name}'s teacher profile has been saved.`,
-    tone: "warning",
+    tone: "success",
   })
 }
 

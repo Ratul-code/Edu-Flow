@@ -1,7 +1,7 @@
 "use client"
 
 import { ArchiveIcon } from "lucide-react"
-import type { ReactElement } from "react"
+import type { ReactElement, ReactNode } from "react"
 
 import {
   AlertDialog,
@@ -14,25 +14,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type ArchiveConfirmDialogProps = {
   action: (formData: FormData) => void | Promise<void>
+  confirmLabel?: string
+  confirmVariant?: "archive" | "destructive"
   description: string
   itemName: string
   returnPath?: string
   title?: string
   trigger?: ReactElement
+  triggerIcon?: ReactNode
   triggerLabel?: string
   triggerSize?: "default" | "icon-sm"
 }
 
 export function ArchiveConfirmDialog({
   action,
+  confirmLabel,
+  confirmVariant = "archive",
   description,
   itemName,
   returnPath,
   title = "Archive this item?",
   trigger,
+  triggerIcon,
   triggerLabel = "Archive",
   triggerSize = "default",
 }: ArchiveConfirmDialogProps) {
@@ -49,7 +56,11 @@ export function ArchiveConfirmDialog({
           )
         }
       >
-        <ArchiveIcon data-icon={triggerSize === "icon-sm" ? undefined : "inline-start"} />
+        {triggerIcon ?? (
+          <ArchiveIcon
+            data-icon={triggerSize === "icon-sm" ? undefined : "inline-start"}
+          />
+        )}
         <span className={triggerSize === "icon-sm" ? "sr-only" : undefined}>
           {triggerLabel}
         </span>
@@ -70,10 +81,15 @@ export function ArchiveConfirmDialog({
               Cancel
             </AlertDialogCancel>
             <Button
-              className="border-slate-700 bg-slate-900 text-white hover:bg-slate-800"
+              className={cn(
+                "text-white",
+                confirmVariant === "destructive"
+                  ? "border-red-600 bg-red-600 hover:bg-red-700"
+                  : "border-slate-700 bg-slate-900 hover:bg-slate-800"
+              )}
               type="submit"
             >
-              Archive {itemName}
+              {confirmLabel ?? `Archive ${itemName}`}
             </Button>
           </AlertDialogFooter>
         </form>

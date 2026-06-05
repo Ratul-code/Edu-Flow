@@ -12,6 +12,7 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider
+      className="h-svh min-h-0 overflow-hidden"
       style={
         {
           "--sidebar-width-icon": "4.75rem",
@@ -19,9 +20,9 @@ export default async function AppLayout({
       }
     >
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">
         <Topbar admin={admin} />
-        <div className="flex flex-1 flex-col gap-6 bg-muted/20 p-4 md:p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto bg-muted/20 p-4 md:p-6">
           {children}
         </div>
       </SidebarInset>

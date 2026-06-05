@@ -65,13 +65,12 @@ function SheetContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-3 right-3"
+                className="absolute top-3 right-3 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
                 size="icon-sm"
               />
             }
           >
-            <XIcon
-            />
+            <XIcon />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}
@@ -84,7 +83,10 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 p-4", className)}
+      className={cn(
+        "flex flex-col gap-0.5 bg-primary p-4 text-primary-foreground shadow-sm [&_[data-slot=sheet-description]]:text-primary-foreground/80 [&_[data-slot=sheet-title]]:text-primary-foreground",
+        className
+      )}
       {...props}
     />
   )

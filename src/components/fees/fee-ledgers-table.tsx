@@ -2,7 +2,7 @@ import { ReceiptTextIcon } from "lucide-react"
 import Link from "next/link"
 
 import type { StudentLedgerRecord } from "@/lib/data/fees"
-import { feeStatusLabel, feeStatusRowClass } from "@/lib/fee-status"
+import { feeStatusLabel } from "@/lib/fee-status"
 import { StatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +23,7 @@ export function FeeLedgersTable({ ledgers }: FeeLedgersTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12 text-center">#</TableHead>
           <TableHead>Student</TableHead>
           <TableHead>Class</TableHead>
           <TableHead>Expected</TableHead>
@@ -35,10 +36,22 @@ export function FeeLedgersTable({ ledgers }: FeeLedgersTableProps) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {ledgers.map((ledger) => (
-          <TableRow className={feeStatusRowClass(ledger.status)} key={ledger.id}>
+        {ledgers.map((ledger, index) => (
+          <TableRow key={ledger.id}>
+            <TableCell className="text-center text-muted-foreground">
+              {index + 1}
+            </TableCell>
             <TableCell className="font-medium">
-              {ledger.student?.name ?? "Unknown student"}
+              {ledger.student?.id ? (
+                <Link
+                  className="text-emerald-800 hover:underline"
+                  href={`/students/${ledger.student.id}`}
+                >
+                  {ledger.student.name}
+                </Link>
+              ) : (
+                "Unknown student"
+              )}
               {ledger.student?.phone ? (
                 <span className="block text-xs font-normal text-muted-foreground">
                   {ledger.student.phone}

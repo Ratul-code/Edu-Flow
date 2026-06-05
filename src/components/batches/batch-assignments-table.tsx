@@ -1,6 +1,8 @@
-import { CalculatorIcon } from "lucide-react"
+import { CalculatorIcon, UserMinusIcon } from "lucide-react"
+import Link from "next/link"
 
 import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
+import { FeeOverrideForm } from "@/components/batches/fee-override-form"
 import { recalculateCurrentStudentMonthlyLedger } from "@/lib/actions/fees"
 import {
   archiveStudentBatch,
@@ -21,11 +23,21 @@ import {
 type BatchAssignmentsTableProps = {
   assignments: StudentBatchRecord[]
   batch: BatchRecord
+  currentPage?: number
+  getPageHref?: (page: number) => string
+  pageSize?: number
+  startIndex?: number
+  totalCount?: number
 }
 
 export function BatchAssignmentsTable({
   assignments,
   batch,
+  currentPage = 1,
+  getPageHref = (page) => `?assignmentPage=${page}`,
+  pageSize = assignments.length || 1,
+  startIndex = 0,
+  totalCount = assignments.length,
 }: BatchAssignmentsTableProps) {
   if (!assignments.length) {
     return (
@@ -35,94 +47,131 @@ export function BatchAssignmentsTable({
     )
   }
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Student</TableHead>
-          <TableHead>Class</TableHead>
-          <TableHead>Fee used</TableHead>
-          <TableHead>Fee override</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {assignments.map((assignment) => (
-          <TableRow key={assignment.id}>
-            <TableCell className="font-medium">
-              {assignment.student?.name ?? "Unknown student"}
-            </TableCell>
-            <TableCell>{assignment.student?.class_level ?? "-"}</TableCell>
-            <TableCell>{formatTaka(feeUsed(batch, assignment))}</TableCell>
-            <TableCell>
-              <form
-                action={updateStudentBatchFeeOverride.bind(
-                  null,
-                  batch.id,
-                  assignment.id
-                )}
-                className="flex min-w-36 items-center gap-2"
-              >
-                <input
-                  className="h-8 w-24 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  min="0"
-                  name="fee_override"
-                  defaultValue={String(assignment.fee_override ?? "")}
-                  placeholder="Batch fee"
-                  step="0.01"
-                  type="number"
-                />
-                <Button size="sm" type="submit" variant="outline">
-                  Save
-                </Button>
-              </form>
-            </TableCell>
-            <TableCell>
-              <StatusBadge status={assignment.status} />
-            </TableCell>
-            <TableCell>
-              <div className="flex justify-end gap-2">
-                {assignment.status === "active" ? (
-                  <form
-                    action={recalculateCurrentStudentMonthlyLedger.bind(
-                      null,
-                      assignment.student_id,
-                      `/batches/${batch.id}`
-                    )}
-                  >
-                    <Button size="icon-sm" type="submit" variant="ghost">
-                      <CalculatorIcon />
-                      <span className="sr-only">
-                        Recalculate current month fee
-                      </span>
-                    </Button>
-                  </form>
-                ) : null}
-                {assignment.status === "active" ? (
-                  <ArchiveConfirmDialog
-                    action={archiveStudentBatch.bind(
-                      null,
-                      batch.id,
-                      assignment.id
-                    )}
-                    description={`This will remove ${assignment.student?.name ?? "this student"} from the active assignments for ${batch.name}.`}
-                    itemName="assignment"
-                    title="Archive assignment?"
-                    triggerSize="icon-sm"
-                  />
-                ) : null}
-              </div>
-            </TableCell>
+    <div className="flex flex-col gap-3">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12 text-center">#</TableHead>
+            <TableHead>Student</TableHead>
+            <TableHead>Class</TableHead>
+            <TableHead>Fee used</TableHead>
+            <TableHead>Fee override</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {assignments.map((assignment, index) => (
+            <TableRow key={assignment.id}>
+              <TableCell className="text-center text-muted-foreground">
+                {startIndex + index + 1}
+              </TableCell>
+              <TableCell className="font-medium">
+                {assignment.student?.name ?? "Unknown student"}
+              </TableCell>
+              <TableCell>{assignment.student?.class_level ?? "-"}</TableCell>
+              <TableCell>{formatTaka(feeUsed(batch, assignment))}</TableCell>
+              <TableCell>
+                <FeeOverrideForm
+                  action={updateStudentBatchFeeOverride.bind(
+                    null,
+                    batch.id,
+                    assignment.id
+                  )}
+                  feeUsed={feeUsed(batch, assignment)}
+                  initialValue={feeOverrideValue(assignment)}
+                />
+              </TableCell>
+              <TableCell>
+                <StatusBadge status={assignment.status} />
+              </TableCell>
+              <TableCell>
+                <div className="flex justify-end gap-2">
+                  {assignment.status === "active" ? (
+                    <form
+                      action={recalculateCurrentStudentMonthlyLedger.bind(
+                        null,
+                        assignment.student_id,
+                        `/batches/${batch.id}`
+                      )}
+                    >
+                      <Button size="icon-sm" type="submit" variant="ghost">
+                        <CalculatorIcon />
+                        <span className="sr-only">
+                          Recalculate current month fee
+                        </span>
+                      </Button>
+                    </form>
+                  ) : null}
+                  {assignment.status === "active" ? (
+                    <ArchiveConfirmDialog
+                      action={archiveStudentBatch.bind(
+                        null,
+                        batch.id,
+                        assignment.id
+                      )}
+                      confirmLabel="Remove student"
+                      confirmVariant="destructive"
+                      description={`This will remove ${assignment.student?.name ?? "this student"} from ${batch.name}.`}
+                      itemName="student"
+                      title="Remove student?"
+                      triggerIcon={<UserMinusIcon />}
+                      triggerLabel="Remove student"
+                      triggerSize="icon-sm"
+                    />
+                  ) : null}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              disabled={currentPage <= 1}
+              render={
+                currentPage > 1 ? (
+                  <Link href={getPageHref(currentPage - 1)} />
+                ) : undefined
+              }
+              size="sm"
+              variant="outline"
+            >
+              Previous
+            </Button>
+            <Button
+              disabled={currentPage >= totalPages}
+              render={
+                currentPage < totalPages ? (
+                  <Link href={getPageHref(currentPage + 1)} />
+                ) : undefined
+              }
+              size="sm"
+              variant="outline"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
 function feeUsed(batch: BatchRecord, assignment: StudentBatchRecord) {
   return assignment.fee_override ?? assignment.custom_fee_override ?? batch.monthly_fee
+}
+
+function feeOverrideValue(assignment: StudentBatchRecord) {
+  return assignment.fee_override ?? assignment.custom_fee_override
 }
 
 function formatTaka(value: number | string | null) {

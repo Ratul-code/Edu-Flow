@@ -97,7 +97,7 @@ export async function updateStudent(
   redirectWithFlashToast(returnPath, {
     title: "Student updated",
     message: `${data.name}'s profile changes have been saved.`,
-    tone: "warning",
+    tone: "success",
   })
 }
 
