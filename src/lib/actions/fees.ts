@@ -306,13 +306,67 @@ export async function updateBillingSettings(formData: FormData) {
     throw new Error(error.message)
   }
 
+  await refreshOpenStudentLedgerWindows(admin.tenantId, settings)
+
   revalidatePath("/settings")
   revalidatePath("/fees")
+  revalidatePath("/dashboard")
   redirectWithFlashToast("/settings", {
     title: "Settings saved",
     message: "The fee payment window has been updated.",
     tone: "success",
   })
+}
+
+async function refreshOpenStudentLedgerWindows(
+  tenantId: string,
+  settings: ReturnType<typeof billingSettingsSchema.parse>
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_monthly_ledgers")
+    .select(
+      "id, ledger_month, expected_amount, discount_amount, paid_amount, due_amount"
+    )
+    .eq("tenant_id", tenantId)
+    .gte("ledger_month", currentMonthStart())
+    .in("status", ["not_started", "due", "overdue", "unpaid"])
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const updates = (data ?? []).map((ledger) => {
+    const window = ledgerBillingWindow(ledger.ledger_month, settings)
+    const expectedAmount = money(ledger.expected_amount)
+    const discountAmount = money(ledger.discount_amount)
+    const paidAmount = money(ledger.paid_amount)
+    const dueAmount = money(ledger.due_amount)
+
+    return supabase
+      .from("student_monthly_ledgers")
+      .update({
+        grace_end_date: window.grace_end_date,
+        payment_start_date: window.payment_start_date,
+        status: ledgerStatusForAmounts({
+          discountAmount,
+          dueAmount,
+          expectedAmount,
+          graceEndDate: window.grace_end_date,
+          paidAmount,
+          paymentStartDate: window.payment_start_date,
+        }),
+      })
+      .eq("tenant_id", tenantId)
+      .eq("id", ledger.id)
+  })
+
+  const results = await Promise.all(updates)
+  const updateError = results.find((result) => result.error)?.error
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
 }
 
 export async function recordStudentPayment(ledgerId: string, formData: FormData) {
@@ -362,15 +416,36 @@ async function saveStudentPayment(
     throw new Error("Payment cannot be greater than the current due amount.")
   }
 
-  const { error: paymentError } = await supabase.from("student_payments").insert({
-    tenant_id: admin.tenantId,
-    ledger_id: ledger.id,
-    student_id: ledger.student_id,
-    receipt_number: receiptNumber(ledger.ledger_month),
+  if (stringField(formData, "payment_action") === "waive") {
+    await waiveStudentLedgerDue({
+      discountAmount: money(ledger.discount_amount),
+      dueAmount,
+      ledgerId: ledger.id,
+      ledgerMonth: ledger.ledger_month,
+      tenantId: admin.tenantId,
+    })
+
+    revalidatePath("/fees")
+    revalidatePath("/dashboard")
+    revalidatePath(`/students/${ledger.student_id}`)
+    redirectWithFlashToast(`/fees?month=${monthInputValue(ledger.ledger_month)}`, {
+      title: "Fee waived",
+      message: "The remaining due amount was waived for this month.",
+      tone: "warning",
+    })
+  }
+
+  const receiptNo = await nextReceiptNo(admin.tenantId, ledger.ledger_month)
+  const { error: paymentError } = await insertStudentPaymentWithReceipt({
     amount,
+    ledgerId: ledger.id,
+    ledgerMonth: ledger.ledger_month,
     method: payment.method,
-    payment_date: payment.payment_date || today(),
     note: payment.note || null,
+    paymentDate: payment.payment_date || today(),
+    receiptNo,
+    studentId: ledger.student_id,
+    tenantId: admin.tenantId,
   })
 
   if (paymentError) {
@@ -424,6 +499,37 @@ async function saveStudentPayment(
     `/fees?month=${monthInputValue(ledger.ledger_month)}`,
     flashToast
   )
+}
+
+async function waiveStudentLedgerDue({
+  discountAmount,
+  dueAmount,
+  ledgerId,
+  ledgerMonth,
+  tenantId,
+}: {
+  discountAmount: number
+  dueAmount: number
+  ledgerId: string
+  ledgerMonth: string
+  tenantId: string
+}) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("student_monthly_ledgers")
+    .update({
+      discount_amount: discountAmount + dueAmount,
+      due_amount: 0,
+      status: "waived",
+    })
+    .eq("tenant_id", tenantId)
+    .eq("id", ledgerId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath(`/fees?month=${monthInputValue(ledgerMonth)}`)
 }
 
 function groupAssignments(assignments: FeeAssignment[]) {
@@ -508,11 +614,82 @@ function studentLedgerPayload({
   }
 }
 
-function receiptNumber(ledgerMonth: string) {
-  const month = ledgerMonth.slice(0, 7).replace("-", "")
-  const entropy = Math.random().toString(36).slice(2, 6).toUpperCase()
+async function insertStudentPaymentWithReceipt({
+  amount,
+  ledgerId,
+  ledgerMonth,
+  method,
+  note,
+  paymentDate,
+  receiptNo,
+  studentId,
+  tenantId,
+}: {
+  amount: number
+  ledgerId: string
+  ledgerMonth: string
+  method: string
+  note: string | null
+  paymentDate: string
+  receiptNo: string
+  studentId: string
+  tenantId: string
+}) {
+  const supabase = await createClient()
+  let candidate = receiptNo
 
-  return `EF-${month}-${Date.now().toString(36).toUpperCase()}-${entropy}`
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { error } = await supabase.from("student_payments").insert({
+      amount,
+      ledger_id: ledgerId,
+      method,
+      note,
+      payment_date: paymentDate,
+      receipt_generated_at: new Date().toISOString(),
+      receipt_no: candidate,
+      receipt_number: candidate,
+      student_id: studentId,
+      tenant_id: tenantId,
+    })
+
+    if (!error) {
+      return { error: null }
+    }
+
+    if (!isUniqueReceiptError(error.message)) {
+      return { error }
+    }
+
+    candidate = await nextReceiptNo(tenantId, ledgerMonth)
+  }
+
+  return { error: new Error("Could not generate a unique receipt number.") }
+}
+
+async function nextReceiptNo(tenantId: string, ledgerMonth: string) {
+  const supabase = await createClient()
+  const month = ledgerMonth.slice(0, 7).replace("-", "")
+  const prefix = `RCPT-${month}-`
+  const { data } = await supabase
+    .from("student_payments")
+    .select("receipt_no")
+    .eq("tenant_id", tenantId)
+    .like("receipt_no", `${prefix}%`)
+    .order("receipt_no", { ascending: false })
+    .limit(1)
+
+  const latest = data?.[0]?.receipt_no
+  const latestSequence =
+    typeof latest === "string" && latest.startsWith(prefix)
+      ? Number(latest.slice(prefix.length))
+      : 0
+  const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1
+
+  return `${prefix}${String(nextSequence).padStart(4, "0")}`
+}
+
+function isUniqueReceiptError(message: string) {
+  return message.toLowerCase().includes("duplicate")
 }
 
 function stringField(formData: FormData, key: string) {

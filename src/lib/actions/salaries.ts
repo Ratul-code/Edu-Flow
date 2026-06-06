@@ -5,6 +5,10 @@ import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
 import { monthInputValue, monthStart } from "@/lib/data/fees"
+import {
+  getTeacherPaymentSettings,
+  teacherSalaryPaymentStartDate,
+} from "@/lib/data/teacher-payment-settings"
 import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -31,6 +35,11 @@ export async function generateTeacherSalaryLedgers(formData: FormData) {
   const supabase = await createClient()
   const { month } = parseFormData(ledgerMonthSchema, formData)
   const ledgerMonth = monthStart(month)
+  const teacherPaymentSettings = await getTeacherPaymentSettings(admin.tenantId)
+  const paymentStartDate = teacherSalaryPaymentStartDate(
+    ledgerMonth,
+    teacherPaymentSettings
+  )
 
   const [{ data: teachers, error: teachersError }, { data: existing, error }] =
     await Promise.all([
@@ -76,6 +85,7 @@ export async function generateTeacherSalaryLedgers(formData: FormData) {
       paid_amount: paidAmount,
       due_amount: dueAmount,
       status: salaryStatus(totalExpected, paidAmount, dueAmount),
+      payment_start_date: paymentStartDate,
       generated_at: new Date().toISOString(),
     }
   })

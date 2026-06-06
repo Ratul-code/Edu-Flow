@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { requireAdminContext } from "@/lib/auth/user"
 import { checkClassLevelsTableExists, listClassLevels } from "@/lib/data/class-levels"
+import { listAcademicGroups } from "@/lib/data/academic-groups"
 
 type BatchFormProps = {
   action: (formData: FormData) => void | Promise<void>
@@ -40,7 +41,10 @@ export async function BatchForm({
 }: BatchFormProps) {
   const admin = await requireAdminContext()
   const tableExists = await checkClassLevelsTableExists()
-  const classLevels = tableExists ? await listClassLevels(admin.tenantId) : []
+  const [classLevels, academicGroups] = await Promise.all([
+    tableExists ? listClassLevels(admin.tenantId) : Promise.resolve([]),
+    listAcademicGroups(admin.tenantId),
+  ])
   return (
     <form action={action}>
       <Card>
@@ -119,9 +123,11 @@ export async function BatchForm({
                 <SelectContent align="start">
                   <SelectGroup>
                     <SelectItem value="">Not set</SelectItem>
-                    <SelectItem value="Science">Science</SelectItem>
-                    <SelectItem value="Commerce">Commerce</SelectItem>
-                    <SelectItem value="Arts">Arts</SelectItem>
+                    {academicGroups.map((option) => (
+                      <SelectItem key={option.id} value={option.name}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>

@@ -40,6 +40,20 @@ export function PaymentForm({ action, ledger }: PaymentFormProps) {
         </CardHeader>
         <CardContent>
           <FieldGroup className="sm:grid sm:grid-cols-2">
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor="payment_action">Action</FieldLabel>
+              <Select defaultValue="payment" name="payment_action">
+                <SelectTrigger className="h-8 w-full" id="payment_action">
+                  <SelectValue placeholder="Record payment" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectGroup>
+                    <SelectItem value="payment">Record payment</SelectItem>
+                    <SelectItem value="waive">Waive remaining due</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
             <Field>
               <FieldLabel htmlFor="amount">Amount</FieldLabel>
               <Input

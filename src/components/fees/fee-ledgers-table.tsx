@@ -4,6 +4,7 @@ import Link from "next/link"
 import type { StudentLedgerRecord } from "@/lib/data/fees"
 import { feeStatusLabel } from "@/lib/fee-status"
 import { StatusBadge } from "@/components/app/status-badge"
+import { StudentPaymentReceiptDialog } from "@/components/receipts/student-payment-receipt-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -75,7 +76,12 @@ export function FeeLedgersTable({ ledgers }: FeeLedgersTableProps) {
               <StatusBadge status={feeStatusLabel(ledger.status)} />
             </TableCell>
             <TableCell>
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                {ledger.status === "paid" && ledger.latest_payment ? (
+                  <StudentPaymentReceiptDialog
+                    paymentId={ledger.latest_payment.id}
+                  />
+                ) : null}
                 {Number(ledger.due_amount) > 0 ? (
                   <Button
                     className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
@@ -87,7 +93,9 @@ export function FeeLedgersTable({ ledgers }: FeeLedgersTableProps) {
                     Record payment
                   </Button>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Settled</span>
+                  !ledger.latest_payment ? (
+                    <span className="text-sm text-muted-foreground">Settled</span>
+                  ) : null
                 )}
               </div>
             </TableCell>

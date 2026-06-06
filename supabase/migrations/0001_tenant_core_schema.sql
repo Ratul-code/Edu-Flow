@@ -19,6 +19,8 @@ create table if not exists public.tenants (
   name text not null,
   address text,
   contact_phone text,
+  secondary_phone text,
+  email text,
   subscription_status text not null default 'trial'
     check (subscription_status in ('trial', 'active', 'past_due', 'suspended', 'cancelled')),
   created_at timestamptz not null default now(),

@@ -19,6 +19,7 @@ import { TagInput } from "@/components/ui/tag-input"
 import { Textarea } from "@/components/ui/textarea"
 import type { BatchRecord } from "@/lib/data/batches"
 import type { ClassLevelRecord } from "@/lib/data/class-levels"
+import type { AcademicGroupRecord } from "@/lib/data/academic-groups"
 import type { StudentRecord } from "@/lib/data/students"
 
 type StudentFieldsProps = {
@@ -27,6 +28,7 @@ type StudentFieldsProps = {
   classLevels: ClassLevelRecord[]
   defaultFeeStartMonth?: string
   errors?: Record<string, string | string[]>
+  groupOptions?: AcademicGroupRecord[]
   showFeeStartControls?: boolean
   student?: StudentRecord
   tableExists: boolean
@@ -38,6 +40,7 @@ export function StudentFields({
   classLevels,
   defaultFeeStartMonth,
   errors,
+  groupOptions = [],
   showFeeStartControls = false,
   student,
   tableExists,
@@ -176,9 +179,11 @@ export function StudentFields({
           <SelectContent align="start">
             <SelectGroup>
               <SelectItem value="">Not set</SelectItem>
-              <SelectItem value="Science">Science</SelectItem>
-              <SelectItem value="Commerce">Commerce</SelectItem>
-              <SelectItem value="Arts">Arts</SelectItem>
+              {groupOptions.map((option) => (
+                <SelectItem key={option.id} value={option.name}>
+                  {option.name}
+                </SelectItem>
+              ))}
             </SelectGroup>
           </SelectContent>
         </Select>

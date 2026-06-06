@@ -192,6 +192,9 @@ export const ledgerMonthSchema = z.object({
 });
 
 export const billingSettingsSchema = z.object({
+  billing_mode: z.enum(["prepaid", "postpaid"], {
+    error: "Select prepaid or postpaid payment.",
+  }),
   payment_start_day: z
     .string()
     .trim()
@@ -202,7 +205,7 @@ export const billingSettingsSchema = z.object({
         .number("Enter a valid payment start day.")
         .int("Payment start day must be a whole number.")
         .min(1, "Payment start day must be at least 1.")
-        .max(31, "Payment start day cannot be after day 31.")
+        .max(15, "Payment start day cannot be after day 15.")
     ),
   grace_period_days: z
     .string()
@@ -213,9 +216,30 @@ export const billingSettingsSchema = z.object({
       z
         .number("Enter a valid grace period.")
         .int("Grace period must be a whole number.")
-        .min(1, "Grace period must be at least 1 day.")
-        .max(31, "Grace period cannot be more than 31 days.")
+        .min(0, "Grace period cannot be less than 0 days.")
+        .max(15, "Grace period cannot be more than 15 days.")
     ),
+});
+
+export const tenantProfileSchema = z.object({
+  address: optionalText(500, "Address is too long."),
+  contact_phone: optionalText(20, "Contact phone is too long."),
+  email: optionalText(100, "Email is too long.")
+    .refine((value) => !value || z.string().email().safeParse(value).success, {
+      message: "Enter a valid email address.",
+    }),
+  name: requiredText("Center name", 100, "Center name is too long."),
+  secondary_phone: optionalText(20, "Secondary phone is too long."),
+});
+
+export const academicGroupSchema = z.object({
+  name: requiredText("Group name", 50, "Group name is too long."),
+});
+
+export const teacherPaymentSettingsSchema = z.object({
+  payment_system: z.enum(["prepaid", "postpaid"], {
+    error: "Select prepaid or postpaid payment.",
+  }),
 });
 
 export const feePaymentSchema = z.object({

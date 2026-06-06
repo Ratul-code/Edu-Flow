@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sheet"
 import type { BatchRecord } from "@/lib/data/batches"
 import type { ClassLevelRecord } from "@/lib/data/class-levels"
+import type { AcademicGroupRecord } from "@/lib/data/academic-groups"
 import {
   formatZodErrors,
   initialFormState,
@@ -37,6 +38,7 @@ type StudentCreateSheetClientProps = {
   batches: BatchRecord[]
   classLevels: ClassLevelRecord[]
   defaultFeeStartMonth: string
+  groupOptions: AcademicGroupRecord[]
   tableExists: boolean
   triggerLabel?: string
   triggerVariant?: "button" | "quick-action"
@@ -47,6 +49,7 @@ export function StudentCreateSheetClient({
   batches,
   classLevels,
   defaultFeeStartMonth,
+  groupOptions,
   tableExists,
   triggerLabel = "Add student",
   triggerVariant = "button",
@@ -188,6 +191,7 @@ export function StudentCreateSheetClient({
                 classLevels={classLevels}
                 defaultFeeStartMonth={defaultFeeStartMonth}
                 errors={displayedErrors}
+                groupOptions={groupOptions}
                 showFeeStartControls
                 tableExists={tableExists}
               />

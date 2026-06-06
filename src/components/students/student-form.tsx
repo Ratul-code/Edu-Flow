@@ -18,6 +18,7 @@ import {
   checkClassLevelsTableExists,
   listClassLevels,
 } from "@/lib/data/class-levels"
+import { listAcademicGroups } from "@/lib/data/academic-groups"
 import type { StudentRecord } from "@/lib/data/students"
 import { currentMonthStart, monthInputValue } from "@/lib/data/fees"
 import type { FormState } from "@/lib/schemas"
@@ -49,6 +50,7 @@ export async function StudentForm({
   title,
 }: StudentFormProps) {
   const { classLevels, tableExists } = await getClassLevelOptions()
+  const academicGroups = await getAcademicGroups()
 
   return (
     <form action={action}>
@@ -64,6 +66,7 @@ export async function StudentForm({
             assignedBatchIds={assignedBatchIds}
             batches={batches}
             classLevels={classLevels}
+            groupOptions={academicGroups}
             student={student}
             tableExists={tableExists}
           />
@@ -86,6 +89,7 @@ export async function StudentCreateSheet({
   triggerVariant,
 }: StudentCreateSheetProps) {
   const { classLevels, tableExists } = await getClassLevelOptions()
+  const academicGroups = await getAcademicGroups()
 
   return (
     <StudentCreateSheetClient
@@ -93,6 +97,7 @@ export async function StudentCreateSheet({
       batches={batches}
       classLevels={classLevels}
       defaultFeeStartMonth={monthInputValue(currentMonthStart())}
+      groupOptions={academicGroups}
       tableExists={tableExists}
       triggerLabel={triggerLabel}
       triggerVariant={triggerVariant}
@@ -116,6 +121,7 @@ export async function StudentEditSheet({
   triggerSize?: "default" | "icon-sm"
 }) {
   const { classLevels, tableExists } = await getClassLevelOptions()
+  const academicGroups = await getAcademicGroups()
 
   return (
     <StudentEditSheetClient
@@ -123,6 +129,7 @@ export async function StudentEditSheet({
       assignedBatchIds={assignedBatchIds}
       batches={batches}
       classLevels={classLevels}
+      groupOptions={academicGroups}
       returnPath={returnPath}
       student={student}
       tableExists={tableExists}
@@ -137,4 +144,10 @@ async function getClassLevelOptions() {
   const classLevels = tableExists ? await listClassLevels(admin.tenantId) : []
 
   return { classLevels, tableExists }
+}
+
+async function getAcademicGroups() {
+  const admin = await requireAdminContext()
+
+  return listAcademicGroups(admin.tenantId)
 }

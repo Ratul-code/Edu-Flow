@@ -46,7 +46,10 @@ export async function createStudent(
     }
   }
 
-  const payload = buildStudentPayload(data, admin.tenantId)
+  const payload = {
+    ...buildStudentPayload(data, admin.tenantId),
+    fee_start_month: startingFeeMonth,
+  }
 
   const { data: created, error } = await supabase
     .from("students")

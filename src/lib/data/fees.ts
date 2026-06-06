@@ -10,6 +10,7 @@ export type LedgerStatus =
 export type PaymentMethod = "cash" | "bkash" | "nagad" | "bank" | "card" | "other"
 
 export type BillingSettingsRecord = {
+  billing_mode: "prepaid" | "postpaid"
   id?: string
   tenant_id?: string
   payment_start_day: number
@@ -33,6 +34,7 @@ export type StudentLedgerRecord = {
   generated_at: string
   created_at: string
   updated_at: string
+  latest_payment?: StudentPaymentReceiptSummary | null
   student?: {
     id: string
     name: string
@@ -47,6 +49,8 @@ export type StudentFeeMonthRecord = {
   ledger_id: string | null
   ledger_month: string
   paid_amount: number | string
+  latest_payment?: StudentPaymentReceiptSummary | null
+  payments: StudentPaymentReceiptSummary[]
   status: LedgerStatus | "not_prepared"
 }
 
@@ -62,11 +66,24 @@ export type StudentFeeHistory = {
 
 export type StudentPaymentRecord = {
   id: string
+  receipt_no: string | null
   receipt_number: string
   amount: number | string
   method: PaymentMethod
   payment_date: string
   note: string | null
+}
+
+export type StudentPaymentReceiptSummary = {
+  amount: number | string
+  due_amount_after_payment: number | string
+  id: string
+  method: PaymentMethod
+  payment_date: string
+  paid_amount_after_payment: number | string
+  receipt_no: string | null
+  receipt_number: string | null
+  status_after_payment: "partial" | "paid"
 }
 
 export type StudentLedgerFilters = {
@@ -123,7 +140,7 @@ export async function listStudentLedgers(
   const search = filters.search?.trim().toLowerCase()
   const status = filters.status ?? "all"
 
-  return (data as unknown as RawStudentLedgerRecord[])
+  const ledgers = (data as unknown as RawStudentLedgerRecord[])
     .map(normalizeLedger)
     .filter((ledger) => {
       if (batchStudentIds && !batchStudentIds.has(ledger.student_id)) {
@@ -153,6 +170,15 @@ export async function listStudentLedgers(
       return searchable.includes(search)
     })
     .sort(compareStudentLedgers)
+  const latestPayments = await latestPaymentsByLedgerId(
+    tenantId,
+    ledgers.map((ledger) => ledger.id)
+  )
+
+  return ledgers.map((ledger) => ({
+    ...ledger,
+    latest_payment: latestPayments.get(ledger.id) ?? null,
+  }))
 }
 
 export async function countOverdueStudentLedgers(
@@ -185,7 +211,7 @@ export async function getStudentFeeHistory(
   const { data, error } = await supabase
     .from("student_monthly_ledgers")
     .select(
-      "id, ledger_month, expected_amount, paid_amount, due_amount, status"
+      "id, ledger_month, expected_amount, discount_amount, paid_amount, due_amount, status"
     )
     .eq("tenant_id", tenantId)
     .eq("student_id", studentId)
@@ -196,12 +222,32 @@ export async function getStudentFeeHistory(
   const ledgerMap = new Map(
     ((error ? [] : data ?? []) as Array<{
       due_amount: number | string
+      discount_amount: number | string
       expected_amount: number | string
       id: string
       ledger_month: string
       paid_amount: number | string
       status: LedgerStatus
     }>).map((ledger) => [ledger.ledger_month, ledger])
+  )
+  const ledgerValues = Array.from(ledgerMap.values())
+  const latestPayments = await latestPaymentsByLedgerId(
+    tenantId,
+    ledgerValues.map((ledger) => ledger.id)
+  )
+  const payments = await paymentsByLedgerId(
+    tenantId,
+    ledgerValues.map((ledger) => ledger.id),
+    new Map(
+      ledgerValues.map((ledger) => [
+        ledger.id,
+        Math.max(
+          numberOrDefault(ledger.expected_amount, 0) -
+            numberOrDefault(ledger.discount_amount, 0),
+          0
+        ),
+      ])
+    )
   )
 
   const months: StudentFeeMonthRecord[] = monthsBetween(
@@ -217,7 +263,9 @@ export async function getStudentFeeHistory(
         expected_amount: ledger?.expected_amount ?? 0,
         ledger_id: ledger?.id ?? null,
         ledger_month: ledgerMonth,
+        latest_payment: ledger ? latestPayments.get(ledger.id) ?? null : null,
         paid_amount: ledger?.paid_amount ?? 0,
+        payments: ledger ? payments.get(ledger.id) ?? [] : [],
         status: ledger?.status ?? "not_prepared",
       }
     })
@@ -237,7 +285,7 @@ export async function getBillingSettings(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("billing_settings")
-    .select("id, tenant_id, payment_start_day, grace_period_days, created_at, updated_at")
+    .select("id, tenant_id, billing_mode, payment_start_day, grace_period_days, created_at, updated_at")
     .eq("tenant_id", tenantId)
     .maybeSingle()
 
@@ -247,21 +295,26 @@ export async function getBillingSettings(
 
   return {
     ...(data as BillingSettingsRecord),
+    billing_mode:
+      (data as BillingSettingsRecord).billing_mode === "postpaid"
+        ? "postpaid"
+        : "prepaid",
     grace_period_days: numberOrDefault(
       (data as BillingSettingsRecord).grace_period_days,
-      10
+      7
     ),
     payment_start_day: numberOrDefault(
       (data as BillingSettingsRecord).payment_start_day,
-      25
+      1
     ),
   }
 }
 
 export function defaultBillingSettings(): BillingSettingsRecord {
   return {
-    grace_period_days: 10,
-    payment_start_day: 25,
+    billing_mode: "prepaid",
+    grace_period_days: 7,
+    payment_start_day: 1,
   }
 }
 
@@ -270,7 +323,11 @@ export function ledgerBillingWindow(
   settings: BillingSettingsRecord
 ) {
   const normalizedMonth = monthStart(ledgerMonth)
-  const { month, year } = parseMonthParts(normalizedMonth)
+  const collectionMonth =
+    settings.billing_mode === "postpaid"
+      ? addMonths(normalizedMonth, 1)
+      : normalizedMonth
+  const { month, year } = parseMonthParts(collectionMonth)
   const paymentStartDay = clamp(
     settings.payment_start_day,
     1,
@@ -279,7 +336,7 @@ export function ledgerBillingWindow(
   const paymentStartDate = isoDate(year, month, paymentStartDay)
   const graceEndDate = addDays(
     paymentStartDate,
-    Math.max(Math.trunc(settings.grace_period_days), 1) - 1
+    clamp(Math.trunc(settings.grace_period_days), 0, 15)
   )
 
   return {
@@ -342,7 +399,7 @@ export async function listStudentPayments(tenantId: string, ledgerId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("student_payments")
-    .select("id, receipt_number, amount, method, payment_date, note")
+    .select("id, receipt_no, receipt_number, amount, method, payment_date, note")
     .eq("tenant_id", tenantId)
     .eq("ledger_id", ledgerId)
     .order("payment_date", { ascending: false })
@@ -392,6 +449,11 @@ type RawStudentLedgerRecord = Omit<StudentLedgerRecord, "student"> & {
     | Array<NonNullable<StudentLedgerRecord["student"]>>
 }
 
+type RawStudentPaymentReceiptSummary = StudentPaymentReceiptSummary & {
+  created_at: string
+  ledger_id: string
+}
+
 function normalizeLedger(ledger: RawStudentLedgerRecord): StudentLedgerRecord {
   return {
     ...ledger,
@@ -413,6 +475,104 @@ async function listStudentIdsForBatch(tenantId: string, batchId: string) {
   }
 
   return new Set(data.map((row) => row.student_id))
+}
+
+async function latestPaymentsByLedgerId(tenantId: string, ledgerIds: string[]) {
+  const uniqueLedgerIds = Array.from(new Set(ledgerIds))
+  const paymentMap = new Map<string, StudentPaymentReceiptSummary>()
+
+  if (!uniqueLedgerIds.length) {
+    return paymentMap
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_payments")
+    .select(
+      "id, ledger_id, receipt_no, receipt_number, amount, method, payment_date, created_at"
+    )
+    .eq("tenant_id", tenantId)
+    .in("ledger_id", uniqueLedgerIds)
+    .order("payment_date", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (error || !data) {
+    return paymentMap
+  }
+
+  for (const payment of data as RawStudentPaymentReceiptSummary[]) {
+    if (paymentMap.has(payment.ledger_id)) {
+      continue
+    }
+
+    paymentMap.set(payment.ledger_id, {
+      amount: payment.amount,
+      due_amount_after_payment: 0,
+      id: payment.id,
+      method: payment.method,
+      payment_date: payment.payment_date,
+      paid_amount_after_payment: payment.amount,
+      receipt_no: payment.receipt_no,
+      receipt_number: payment.receipt_number,
+      status_after_payment: "paid",
+    })
+  }
+
+  return paymentMap
+}
+
+async function paymentsByLedgerId(
+  tenantId: string,
+  ledgerIds: string[],
+  netAmountByLedgerId: Map<string, number>
+) {
+  const uniqueLedgerIds = Array.from(new Set(ledgerIds))
+  const paymentMap = new Map<string, StudentPaymentReceiptSummary[]>()
+
+  if (!uniqueLedgerIds.length) {
+    return paymentMap
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_payments")
+    .select(
+      "id, ledger_id, receipt_no, receipt_number, amount, method, payment_date, created_at"
+    )
+    .eq("tenant_id", tenantId)
+    .in("ledger_id", uniqueLedgerIds)
+    .order("payment_date", { ascending: true })
+    .order("created_at", { ascending: true })
+
+  if (error || !data) {
+    return paymentMap
+  }
+
+  const paidByLedgerId = new Map<string, number>()
+
+  for (const payment of data as RawStudentPaymentReceiptSummary[]) {
+    const paidAmount =
+      (paidByLedgerId.get(payment.ledger_id) ?? 0) + numberOrDefault(payment.amount, 0)
+    const netAmount = netAmountByLedgerId.get(payment.ledger_id) ?? 0
+    const dueAmount = Math.max(netAmount - paidAmount, 0)
+    paidByLedgerId.set(payment.ledger_id, paidAmount)
+
+    const payments = paymentMap.get(payment.ledger_id) ?? []
+    payments.push({
+      amount: payment.amount,
+      due_amount_after_payment: dueAmount,
+      id: payment.id,
+      method: payment.method,
+      paid_amount_after_payment: paidAmount,
+      payment_date: payment.payment_date,
+      receipt_no: payment.receipt_no,
+      receipt_number: payment.receipt_number,
+      status_after_payment: dueAmount > 0 ? "partial" : "paid",
+    })
+    paymentMap.set(payment.ledger_id, payments)
+  }
+
+  return paymentMap
 }
 
 function compareStudentLedgers(

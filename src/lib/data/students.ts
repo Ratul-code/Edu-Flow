@@ -19,6 +19,7 @@ export type StudentRecord = {
   group_name: string | null
   tags: string[]
   admission_date: string
+  fee_start_month: string
   status: StudentStatus
   notes: string | null
   created_at: string
@@ -76,6 +77,7 @@ const studentSelect = `
   group_name,
   tags,
   admission_date,
+  fee_start_month,
   status,
   notes,
   created_at,

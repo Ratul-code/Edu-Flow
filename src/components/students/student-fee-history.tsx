@@ -1,7 +1,9 @@
 import { ReceiptTextIcon } from "lucide-react"
 import Link from "next/link"
+import { Fragment } from "react"
 
 import { StatusBadge } from "@/components/app/status-badge"
+import { StudentPaymentReceiptDialog } from "@/components/receipts/student-payment-receipt-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -61,39 +63,70 @@ export function StudentFeeHistory({ history }: StudentFeeHistoryProps) {
           </TableHeader>
           <TableBody>
             {history.months.map((month, index) => (
-              <TableRow key={month.ledger_month}>
-                <TableCell className="text-center text-muted-foreground">
-                  {index + 1}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {formatMonth(month.ledger_month)}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={feeStatusLabel(month.status)} />
-                </TableCell>
-                <TableCell>{formatTaka(month.expected_amount)}</TableCell>
-                <TableCell>{formatTaka(month.paid_amount)}</TableCell>
-                <TableCell>{formatTaka(month.due_amount)}</TableCell>
-                <TableCell>
-                  <div className="flex justify-end">
-                    {month.ledger_id && Number(month.due_amount) > 0 ? (
-                      <Button
-                        className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
-                        render={
-                          <Link href={`/fees/${month.ledger_id}/payment`} />
-                        }
-                        size="sm"
-                        variant="outline"
-                      >
-                        <ReceiptTextIcon data-icon="inline-start" />
-                        Record payment
-                      </Button>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+              <Fragment key={month.ledger_month}>
+                <TableRow>
+                  <TableCell className="text-center text-muted-foreground">
+                    {index + 1}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {formatMonth(month.ledger_month)}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={feeStatusLabel(month.status)} />
+                  </TableCell>
+                  <TableCell>{formatTaka(month.expected_amount)}</TableCell>
+                  <TableCell>{formatTaka(month.paid_amount)}</TableCell>
+                  <TableCell>{formatTaka(month.due_amount)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {month.ledger_id && Number(month.due_amount) > 0 ? (
+                        <Button
+                          className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                          render={
+                            <Link href={`/fees/${month.ledger_id}/payment`} />
+                          }
+                          size="sm"
+                          variant="outline"
+                        >
+                          <ReceiptTextIcon data-icon="inline-start" />
+                          Record payment
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {month.payments.map((payment, paymentIndex) => (
+                  <TableRow
+                    className="bg-emerald-50/45"
+                    key={`${month.ledger_month}-${payment.id}`}
+                  >
+                    <TableCell />
+                    <TableCell>
+                      <span className="block text-sm font-medium text-emerald-800">
+                        Payment {paymentIndex + 1}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {formatDate(payment.payment_date)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={payment.status_after_payment} />
+                    </TableCell>
+                    <TableCell>{formatTaka(month.expected_amount)}</TableCell>
+                    <TableCell>{formatTaka(payment.amount)}</TableCell>
+                    <TableCell>
+                      {formatTaka(payment.due_amount_after_payment)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <StudentPaymentReceiptDialog paymentId={payment.id} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </Fragment>
             ))}
           </TableBody>
         </Table>
@@ -127,6 +160,14 @@ function SummaryTile({
 function formatMonth(value: string) {
   return new Intl.DateTimeFormat("en-BD", {
     month: "long",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`))
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-BD", {
+    day: "numeric",
+    month: "short",
     year: "numeric",
   }).format(new Date(`${value}T00:00:00`))
 }
