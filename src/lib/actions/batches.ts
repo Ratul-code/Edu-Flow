@@ -1,8 +1,10 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import { BATCHES_ROUTE_CACHE_TAG } from "@/lib/data/batches"
+import { STUDENTS_ROUTE_CACHE_TAG } from "@/lib/data/students"
 import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -30,6 +32,8 @@ export async function createBatch(formData: FormData) {
     throw new Error(error?.message ?? "Could not create batch.")
   }
 
+  revalidateTag(BATCHES_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/batches")
   redirectWithFlashToast(`/batches/${data.id}`, {
     title: "Batch added",
@@ -53,6 +57,8 @@ export async function updateBatch(batchId: string, formData: FormData) {
     throw new Error(error.message)
   }
 
+  revalidateTag(BATCHES_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/batches")
   revalidatePath(`/batches/${batchId}`)
   redirectWithFlashToast(`/batches/${batchId}`, {
@@ -75,6 +81,8 @@ export async function archiveBatch(batchId: string, formData?: FormData) {
     throw new Error(error.message)
   }
 
+  revalidateTag(BATCHES_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/batches")
   revalidatePath(`/batches/${batchId}`)
   redirectWithFlashToast(stringField(formData, "return_path") || "/batches", {
@@ -109,6 +117,7 @@ export async function assignStudentToBatch(batchId: string, formData: FormData) 
     throw new Error(error.message)
   }
 
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath(`/batches/${batchId}`)
 }
 
@@ -137,6 +146,7 @@ export async function updateStudentBatchFeeOverride(
     throw new Error(error.message)
   }
 
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath(`/batches/${batchId}`)
 }
 
@@ -157,6 +167,7 @@ export async function archiveStudentBatch(
     throw new Error(error.message)
   }
 
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath(`/batches/${batchId}`)
 }
 

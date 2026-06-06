@@ -5,7 +5,16 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { FeeStartControls } from "@/components/students/fee-start-controls"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { TagInput } from "@/components/ui/tag-input"
 import { Textarea } from "@/components/ui/textarea"
 import type { BatchRecord } from "@/lib/data/batches"
@@ -90,20 +99,25 @@ export function StudentFields({
       <Field data-invalid={Boolean(errors?.class_level)}>
         <FieldLabel htmlFor="class_level">Class level</FieldLabel>
         {tableExists && classLevels.length > 0 ? (
-          <select
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            defaultValue={student?.class_level ?? ""}
-            id="class_level"
-            name="class_level"
-            aria-invalid={Boolean(errors?.class_level)}
-          >
-            <option value="">Not set</option>
-            {classLevels.map((level) => (
-              <option key={level.id} value={level.name}>
-                {level.name}
-              </option>
-            ))}
-          </select>
+          <Select defaultValue={student?.class_level ?? ""} name="class_level">
+            <SelectTrigger
+              aria-invalid={Boolean(errors?.class_level)}
+              className="h-8 w-full"
+              id="class_level"
+            >
+              <SelectValue placeholder="Not set" />
+            </SelectTrigger>
+            <SelectContent align="start">
+              <SelectGroup>
+                <SelectItem value="">Not set</SelectItem>
+                {classLevels.map((level) => (
+                  <SelectItem key={level.id} value={level.name}>
+                    {level.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         ) : (
           <Input
             id="class_level"
@@ -130,48 +144,63 @@ export function StudentFields({
       </Field>
       <Field data-invalid={Boolean(errors?.medium)}>
         <FieldLabel htmlFor="medium">Medium</FieldLabel>
-        <select
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={student?.medium ?? ""}
-          id="medium"
-          name="medium"
-          aria-invalid={Boolean(errors?.medium)}
-        >
-          <option value="">Not set</option>
-          <option value="Bangla Medium">Bangla Medium</option>
-          <option value="English Version">English Version</option>
-          <option value="English Medium">English Medium</option>
-        </select>
+        <Select defaultValue={student?.medium ?? ""} name="medium">
+          <SelectTrigger
+            aria-invalid={Boolean(errors?.medium)}
+            className="h-8 w-full"
+            id="medium"
+          >
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">Not set</SelectItem>
+              <SelectItem value="Bangla Medium">Bangla Medium</SelectItem>
+              <SelectItem value="English Version">English Version</SelectItem>
+              <SelectItem value="English Medium">English Medium</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <FieldError>{fieldError(errors?.medium)}</FieldError>
       </Field>
       <Field data-invalid={Boolean(errors?.group_name)}>
         <FieldLabel htmlFor="group_name">Group</FieldLabel>
-        <select
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={student?.group_name ?? ""}
-          id="group_name"
-          name="group_name"
-          aria-invalid={Boolean(errors?.group_name)}
-        >
-          <option value="">Not set</option>
-          <option value="Science">Science</option>
-          <option value="Commerce">Commerce</option>
-          <option value="Arts">Arts</option>
-        </select>
+        <Select defaultValue={student?.group_name ?? ""} name="group_name">
+          <SelectTrigger
+            aria-invalid={Boolean(errors?.group_name)}
+            className="h-8 w-full"
+            id="group_name"
+          >
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">Not set</SelectItem>
+              <SelectItem value="Science">Science</SelectItem>
+              <SelectItem value="Commerce">Commerce</SelectItem>
+              <SelectItem value="Arts">Arts</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <FieldError>{fieldError(errors?.group_name)}</FieldError>
       </Field>
       <Field data-invalid={Boolean(errors?.status)}>
         <FieldLabel htmlFor="status">Status</FieldLabel>
-        <select
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={student?.status ?? "active"}
-          id="status"
-          name="status"
-          aria-invalid={Boolean(errors?.status)}
-        >
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-        </select>
+        <Select defaultValue={student?.status ?? "active"} name="status">
+          <SelectTrigger
+            aria-invalid={Boolean(errors?.status)}
+            className="h-8 w-full"
+            id="status"
+          >
+            <SelectValue placeholder="Active" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <FieldError>{fieldError(errors?.status)}</FieldError>
       </Field>
       <Field className="sm:col-span-2" data-invalid={Boolean(errors?.tags)}>
@@ -189,11 +218,10 @@ export function StudentFields({
           <div className="grid gap-2 rounded-lg border bg-muted/20 p-3 sm:grid-cols-2">
             {batches.map((batch) => (
               <label className="flex items-start gap-2 text-sm" key={batch.id}>
-                <input
+                <Checkbox
                   className="mt-1"
                   defaultChecked={assignedBatchIds.includes(batch.id)}
                   name="batch_ids"
-                  type="checkbox"
                   value={batch.id}
                 />
                 <span>

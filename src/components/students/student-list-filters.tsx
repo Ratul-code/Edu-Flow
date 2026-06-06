@@ -3,10 +3,18 @@
 import { SearchIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type StudentListFiltersProps = {
   classLevels: string[];
@@ -36,20 +44,14 @@ export function StudentListFilters({
   const [search, setSearch] = useState(filters.search ?? "");
   const hasMounted = useRef(false);
 
-  useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true;
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
+  const replaceParam = useCallback(
+    function replaceParam(key: string, value: string) {
       const params = new URLSearchParams(window.location.search);
-      const nextSearch = search.trim();
 
-      if (nextSearch) {
-        params.set("q", nextSearch);
+      if (value) {
+        params.set(key, value);
       } else {
-        params.delete("q");
+        params.delete(key);
       }
 
       params.delete("page");
@@ -61,15 +63,27 @@ export function StudentListFilters({
       startTransition(() => {
         router.replace(nextHref, { scroll: false });
       });
+    },
+    [pathname, router]
+  );
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      replaceParam("q", search.trim());
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [pathname, router, search]);
+  }, [replaceParam, search]);
 
   return (
     <form
-      action="/students"
       className="flex flex-col gap-3 lg:flex-row lg:items-center"
+      onSubmit={(event) => event.preventDefault()}
       role="search"
     >
       <div className="relative min-w-0 flex-1">
@@ -84,69 +98,100 @@ export function StudentListFilters({
         />
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <select
-          className="h-10 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={filters.classLevel ?? ""}
+        <Select
           name="classLevel"
+          onValueChange={(value) => replaceParam("classLevel", value ?? "")}
+          value={filters.classLevel ?? ""}
         >
-          <option value="">All classes</option>
-          {classLevels.map((classLevel) => (
-            <option key={classLevel} value={classLevel}>
-              {classLevel}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-10 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={filters.medium ?? ""}
+          <SelectTrigger className="h-10 w-full sm:w-36">
+            <SelectValue placeholder="All classes" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">All classes</SelectItem>
+              {classLevels.map((classLevel) => (
+                <SelectItem key={classLevel} value={classLevel}>
+                  {classLevel}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
           name="medium"
+          onValueChange={(value) => replaceParam("medium", value ?? "")}
+          value={filters.medium ?? ""}
         >
-          <option value="">All mediums</option>
-          {mediums.map((medium) => (
-            <option key={medium} value={medium}>
-              {medium}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-10 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={filters.groupName ?? ""}
+          <SelectTrigger className="h-10 w-full sm:w-40">
+            <SelectValue placeholder="All mediums" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">All mediums</SelectItem>
+              {mediums.map((medium) => (
+                <SelectItem key={medium} value={medium}>
+                  {medium}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
           name="groupName"
+          onValueChange={(value) => replaceParam("groupName", value ?? "")}
+          value={filters.groupName ?? ""}
         >
-          <option value="">All groups</option>
-          {groups.map((group) => (
-            <option key={group} value={group}>
-              {group}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-10 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={filters.tag ?? ""}
+          <SelectTrigger className="h-10 w-full sm:w-36">
+            <SelectValue placeholder="All groups" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">All groups</SelectItem>
+              {groups.map((group) => (
+                <SelectItem key={group} value={group}>
+                  {group}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
           name="tag"
+          onValueChange={(value) => replaceParam("tag", value ?? "")}
+          value={filters.tag ?? ""}
         >
-          <option value="">All tags</option>
-          {tags.map((tag) => (
-            <option key={tag} value={tag}>
-              {tag}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-10 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={filters.status ?? "all"}
+          <SelectTrigger className="h-10 w-full sm:w-36">
+            <SelectValue placeholder="All tags" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">All tags</SelectItem>
+              {tags.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
           name="status"
+          onValueChange={(value) => replaceParam("status", value ?? "")}
+          value={filters.status ?? "all"}
         >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-        </select>
-        <Button className="h-10 px-4 text-sm" type="submit">
-          <SearchIcon data-icon="inline-start" />
-          Search
-        </Button>
+          <SelectTrigger className="h-10 w-full sm:w-36">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <Button
-          className="h-10 px-4 text-sm"
+          className="px-4 text-sm"
           render={<Link href="/students" />}
           variant="outline"
         >

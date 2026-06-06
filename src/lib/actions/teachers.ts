@@ -1,8 +1,9 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import { TEACHERS_ROUTE_CACHE_TAG } from "@/lib/data/teachers"
 import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -37,6 +38,7 @@ export async function createTeacher(
     return { message: error?.message ?? "Could not create teacher." }
   }
 
+  revalidateTag(TEACHERS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/teachers")
   redirectWithFlashToast(`/teachers/${data.id}`, {
     title: "Teacher added",
@@ -69,6 +71,7 @@ export async function updateTeacher(
     return { message: error.message }
   }
 
+  revalidateTag(TEACHERS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/teachers")
   revalidatePath(`/teachers/${teacherId}`)
   redirectWithFlashToast(redirectPath, {
@@ -91,6 +94,7 @@ export async function archiveTeacher(teacherId: string, formData?: FormData) {
     throw new Error(error.message)
   }
 
+  revalidateTag(TEACHERS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/teachers")
   revalidatePath(`/teachers/${teacherId}`)
   redirectWithFlashToast(stringField(formData, "return_path") || "/teachers", {

@@ -1,14 +1,10 @@
-import { EyeIcon } from "lucide-react"
-import Link from "next/link"
+import { EyeIcon } from "lucide-react";
+import Link from "next/link";
 
-import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
-import { archiveStudent } from "@/lib/actions/students"
-import { updateStudent } from "@/lib/actions/students"
-import { StudentEditSheet } from "@/components/students/student-form"
-import type { BatchRecord } from "@/lib/data/batches"
-import type { StudentRecord } from "@/lib/data/students"
-import { Button } from "@/components/ui/button"
-import { StatusBadge } from "@/components/app/status-badge"
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog";
+import { StatusBadge } from "@/components/app/status-badge";
+import { StudentEditSheet } from "@/components/students/student-form";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -16,14 +12,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
+import { archiveStudent, updateStudent } from "@/lib/actions/students";
+import type { BatchRecord } from "@/lib/data/batches";
+import type { StudentRecord } from "@/lib/data/students";
 
 type StudentsTableProps = {
-  assignedBatchIdsByStudent?: Record<string, string[]>
-  batches?: BatchRecord[]
-  currentPath?: string
-  students: StudentRecord[]
-}
+  assignedBatchIdsByStudent?: Record<string, string[]>;
+  batches?: BatchRecord[];
+  currentPath?: string;
+  students: StudentRecord[];
+};
 
 export function StudentsTable({
   assignedBatchIdsByStudent = {},
@@ -31,22 +30,22 @@ export function StudentsTable({
   currentPath = "/students",
   students,
 }: StudentsTableProps) {
-  const batchById = new Map(batches.map((batch) => [batch.id, batch]))
+  const batchById = new Map(batches.map((batch) => [batch.id, batch]));
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-12 text-center">#</TableHead>
-          <TableHead>Name</TableHead>
+          <TableHead> Name</TableHead >
           <TableHead>Class</TableHead>
           <TableHead>Medium</TableHead>
           <TableHead>Group</TableHead>
           <TableHead>Batch</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
+        </TableRow >
+      </TableHeader >
       <TableBody>
         {students.map((student, index) => (
           <TableRow key={student.id}>
@@ -109,23 +108,23 @@ export function StudentsTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
-  )
+    </Table >
+  );
 }
 
 function BatchChips({
   batchById,
   batchIds,
 }: {
-  batchById: Map<string, BatchRecord>
-  batchIds: string[]
+  batchById: Map<string, BatchRecord>;
+  batchIds: string[];
 }) {
   const batches = batchIds
     .map((batchId) => batchById.get(batchId))
-    .filter((batch): batch is BatchRecord => Boolean(batch))
+    .filter((batch): batch is BatchRecord => Boolean(batch));
 
   if (!batches.length) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
   return (
@@ -139,5 +138,5 @@ function BatchChips({
         </span>
       ))}
     </div>
-  )
+  );
 }

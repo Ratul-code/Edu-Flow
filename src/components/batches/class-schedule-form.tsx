@@ -9,6 +9,14 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type ClassScheduleFormProps = {
   action: (formData: FormData) => void | Promise<void>
@@ -36,34 +44,40 @@ export function ClassScheduleForm({
             </Field>
             <Field>
               <FieldLabel htmlFor="weekday">Weekday</FieldLabel>
-              <select
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                id="weekday"
-                name="weekday"
-              >
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                  (day, index) => (
-                    <option key={day} value={index}>
-                      {day}
-                    </option>
-                  )
-                )}
-              </select>
+              <Select defaultValue="0" name="weekday">
+                <SelectTrigger className="h-8 w-full" id="weekday">
+                  <SelectValue placeholder="Weekday" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectGroup>
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                      (day, index) => (
+                        <SelectItem key={day} value={String(index)}>
+                          {day}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="teacher_id">Teacher</FieldLabel>
-              <select
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                id="teacher_id"
-                name="teacher_id"
-              >
-                <option value="">No teacher</option>
-                {teachers.map((teacher) => (
-                  <option key={teacher.id} value={teacher.id}>
-                    {teacher.name}
-                  </option>
-                ))}
-              </select>
+              <Select defaultValue="" name="teacher_id">
+                <SelectTrigger className="h-8 w-full" id="teacher_id">
+                  <SelectValue placeholder="No teacher" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectGroup>
+                    <SelectItem value="">No teacher</SelectItem>
+                    {teachers.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="start_time">Start time</FieldLabel>

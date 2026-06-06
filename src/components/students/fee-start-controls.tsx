@@ -4,6 +4,14 @@ import { useState } from "react"
 
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type FeeStartOption = "current" | "next" | "custom"
 
@@ -21,18 +29,23 @@ export function FeeStartControls({ defaultMonth }: FeeStartControlsProps) {
     <Field className="sm:col-span-2">
       <FieldLabel htmlFor="fee_start_option">Fee starts from</FieldLabel>
       <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[180px_1fr]">
-        <select
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          id="fee_start_option"
+        <Select
           name="fee_start_option"
-          onChange={(event) => setOption(event.target.value as FeeStartOption)}
+          onValueChange={(value) => setOption((value ?? "current") as FeeStartOption)}
           required
           value={option}
         >
-          <option value="current">Current month</option>
-          <option value="next">Next month</option>
-          <option value="custom">Custom month</option>
-        </select>
+          <SelectTrigger className="h-8 w-full" id="fee_start_option">
+            <SelectValue placeholder="Current month" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="current">Current month</SelectItem>
+              <SelectItem value="next">Next month</SelectItem>
+              <SelectItem value="custom">Custom month</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         {option === "custom" ? (
           <Input
             defaultValue={defaultMonth}

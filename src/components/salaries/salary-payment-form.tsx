@@ -12,6 +12,14 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
 type SalaryPaymentFormProps = {
@@ -46,19 +54,21 @@ export function SalaryPaymentForm({ action, ledger }: SalaryPaymentFormProps) {
             </Field>
             <Field>
               <FieldLabel htmlFor="method">Method</FieldLabel>
-              <select
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                defaultValue="cash"
-                id="method"
-                name="method"
-              >
-                <option value="cash">Cash</option>
-                <option value="bkash">bKash</option>
-                <option value="nagad">Nagad</option>
-                <option value="bank">Bank</option>
-                <option value="card">Card</option>
-                <option value="other">Other</option>
-              </select>
+              <Select defaultValue="cash" name="method">
+                <SelectTrigger className="h-8 w-full" id="method">
+                  <SelectValue placeholder="Cash" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectGroup>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bkash">bKash</SelectItem>
+                    <SelectItem value="nagad">Nagad</SelectItem>
+                    <SelectItem value="bank">Bank</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="payment_date">Payment date</FieldLabel>

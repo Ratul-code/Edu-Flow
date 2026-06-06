@@ -1,16 +1,10 @@
-import { CalculatorIcon, UserMinusIcon } from "lucide-react"
-import Link from "next/link"
+import { CalculatorIcon, UserMinusIcon } from "lucide-react";
+import Link from "next/link";
 
-import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
-import { FeeOverrideForm } from "@/components/batches/fee-override-form"
-import { recalculateCurrentStudentMonthlyLedger } from "@/lib/actions/fees"
-import {
-  archiveStudentBatch,
-  updateStudentBatchFeeOverride,
-} from "@/lib/actions/batches"
-import type { BatchRecord, StudentBatchRecord } from "@/lib/data/batches"
-import { StatusBadge } from "@/components/app/status-badge"
-import { Button } from "@/components/ui/button"
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog";
+import { StatusBadge } from "@/components/app/status-badge";
+import { FeeOverrideForm } from "@/components/batches/fee-override-form";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,17 +12,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
+import {
+  archiveStudentBatch,
+  updateStudentBatchFeeOverride,
+} from "@/lib/actions/batches";
+import { recalculateCurrentStudentMonthlyLedger } from "@/lib/actions/fees";
+import type { BatchRecord, StudentBatchRecord } from "@/lib/data/batches";
 
 type BatchAssignmentsTableProps = {
-  assignments: StudentBatchRecord[]
-  batch: BatchRecord
-  currentPage?: number
-  getPageHref?: (page: number) => string
-  pageSize?: number
-  startIndex?: number
-  totalCount?: number
-}
+  assignments: StudentBatchRecord[];
+  batch: BatchRecord;
+  currentPage?: number;
+  getPageHref?: (page: number) => string;
+  pageSize?: number;
+  startIndex?: number;
+  totalCount?: number;
+};
 
 export function BatchAssignmentsTable({
   assignments,
@@ -44,10 +44,10 @@ export function BatchAssignmentsTable({
       <p className="text-sm text-muted-foreground">
         No students are assigned to this batch yet.
       </p>
-    )
+    );
   }
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <div className="flex flex-col gap-3">
@@ -163,17 +163,17 @@ export function BatchAssignmentsTable({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function feeUsed(batch: BatchRecord, assignment: StudentBatchRecord) {
-  return assignment.fee_override ?? assignment.custom_fee_override ?? batch.monthly_fee
+  return assignment.fee_override ?? assignment.custom_fee_override ?? batch.monthly_fee;
 }
 
 function feeOverrideValue(assignment: StudentBatchRecord) {
-  return assignment.fee_override ?? assignment.custom_fee_override
+  return assignment.fee_override ?? assignment.custom_fee_override;
 }
 
 function formatTaka(value: number | string | null) {
-  return `৳${Number(value ?? 0).toLocaleString("en-BD")}`
+  return `৳${Number(value ?? 0).toLocaleString("en-BD")}`;
 }

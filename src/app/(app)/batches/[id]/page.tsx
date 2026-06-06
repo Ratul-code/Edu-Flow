@@ -1,54 +1,54 @@
-import { PencilIcon } from "lucide-react"
-import Link from "next/link"
-import { notFound } from "next/navigation"
+import { PencilIcon } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
-import { PageHeader } from "@/components/app/page-header"
-import { StatusBadge } from "@/components/app/status-badge"
-import { BatchAssignmentForm } from "@/components/batches/batch-assignment-form"
-import { BatchAssignmentsTable } from "@/components/batches/batch-assignments-table"
-import { ClassScheduleForm } from "@/components/batches/class-schedule-form"
-import { ClassSchedulesTable } from "@/components/batches/class-schedules-table"
-import { Button } from "@/components/ui/button"
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog";
+import { PageHeader } from "@/components/app/page-header";
+import { StatusBadge } from "@/components/app/status-badge";
+import { BatchAssignmentForm } from "@/components/batches/batch-assignment-form";
+import { BatchAssignmentsTable } from "@/components/batches/batch-assignments-table";
+import { ClassScheduleForm } from "@/components/batches/class-schedule-form";
+import { ClassSchedulesTable } from "@/components/batches/class-schedules-table";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   archiveBatch,
   assignStudentToBatch,
   createClassSchedule,
-} from "@/lib/actions/batches"
-import { requireAdminContext } from "@/lib/auth/user"
+} from "@/lib/actions/batches";
+import { requireAdminContext } from "@/lib/auth/user";
 import {
   getBatchById,
   listBatchAssignments,
   listBatchSchedules,
-} from "@/lib/data/batches"
+} from "@/lib/data/batches";
 import {
   listStudentClassLevels,
   listStudentGroups,
   listStudentMediums,
   listStudents,
   listStudentTags,
-} from "@/lib/data/students"
-import { listTeachers } from "@/lib/data/teachers"
+} from "@/lib/data/students";
+import { listTeachers } from "@/lib/data/teachers";
 
 type BatchDetailPageProps = {
-  params: Promise<{ id: string }>
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
+  params: Promise<{ id: string; }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export default async function BatchDetailPage({
   params,
   searchParams,
 }: BatchDetailPageProps) {
-  const admin = await requireAdminContext()
-  const { id } = await params
-  const paramsValue = await searchParams
+  const admin = await requireAdminContext();
+  const { id } = await params;
+  const paramsValue = await searchParams;
   const studentFilters = {
     classLevel: stringParam(paramsValue.studentClassLevel),
     groupName: stringParam(paramsValue.studentGroupName),
@@ -56,7 +56,7 @@ export default async function BatchDetailPage({
     search: stringParam(paramsValue.studentQ),
     status: "active" as const,
     tag: stringParam(paramsValue.studentTag),
-  }
+  };
   const [
     batch,
     assignments,
@@ -77,35 +77,35 @@ export default async function BatchDetailPage({
     listStudentMediums(admin.tenantId),
     listStudentGroups(admin.tenantId),
     listStudentTags(admin.tenantId),
-  ])
+  ]);
 
   if (!batch) {
-    notFound()
+    notFound();
   }
 
   const activeAssignedStudentIds = new Set(
     assignments
       .filter((assignment) => assignment.status === "active")
       .map((assignment) => assignment.student_id)
-  )
+  );
   const visibleAssignments = assignments.filter(
     (assignment) => assignment.status === "active"
-  )
+  );
   const availableStudents = students.filter(
     (student) => !activeAssignedStudentIds.has(student.id)
-  )
-  const assignmentPage = positiveIntegerParam(paramsValue.assignmentPage) ?? 1
-  const assignmentPageSize = 8
+  );
+  const assignmentPage = positiveIntegerParam(paramsValue.assignmentPage) ?? 1;
+  const assignmentPageSize = 8;
   const assignmentTotalPages = Math.max(
     1,
     Math.ceil(visibleAssignments.length / assignmentPageSize)
-  )
-  const currentAssignmentPage = Math.min(assignmentPage, assignmentTotalPages)
-  const assignmentStartIndex = (currentAssignmentPage - 1) * assignmentPageSize
+  );
+  const currentAssignmentPage = Math.min(assignmentPage, assignmentTotalPages);
+  const assignmentStartIndex = (currentAssignmentPage - 1) * assignmentPageSize;
   const paginatedAssignments = visibleAssignments.slice(
     assignmentStartIndex,
     assignmentStartIndex + assignmentPageSize
-  )
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -200,44 +200,44 @@ export default async function BatchDetailPage({
         />
       </div>
     </div>
-  )
+  );
 }
 
 function DetailItem({
   label,
   value,
 }: {
-  label: string
-  value: React.ReactNode
+  label: string;
+  value: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <span className="text-sm">{value || "-"}</span>
     </div>
-  )
+  );
 }
 
 function formatTaka(value: number | string) {
-  return `৳${Number(value).toLocaleString("en-BD")}`
+  return `৳${Number(value).toLocaleString("en-BD")}`;
 }
 
 function stringParam(value: string | string[] | undefined) {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function positiveIntegerParam(value: string | string[] | undefined) {
-  const parsed = Number(stringParam(value))
+  const parsed = Number(stringParam(value));
 
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function studentFilterKey(filters: {
-  classLevel?: string
-  groupName?: string
-  medium?: string
-  search?: string
-  tag?: string
+  classLevel?: string;
+  groupName?: string;
+  medium?: string;
+  search?: string;
+  tag?: string;
 }) {
   return [
     filters.search,
@@ -245,7 +245,7 @@ function studentFilterKey(filters: {
     filters.medium,
     filters.groupName,
     filters.tag,
-  ].join("|")
+  ].join("|");
 }
 
 function pageHref(
@@ -253,26 +253,26 @@ function pageHref(
   key: string,
   page: number
 ) {
-  const nextParams = new URLSearchParams()
+  const nextParams = new URLSearchParams();
 
   Object.entries(currentParams).forEach(([paramKey, value]) => {
     if (paramKey === key || value === undefined) {
-      return
+      return;
     }
 
     if (Array.isArray(value)) {
-      value.forEach((item) => nextParams.append(paramKey, item))
-      return
+      value.forEach((item) => nextParams.append(paramKey, item));
+      return;
     }
 
-    nextParams.set(paramKey, value)
-  })
+    nextParams.set(paramKey, value);
+  });
 
   if (page > 1) {
-    nextParams.set(key, String(page))
+    nextParams.set(key, String(page));
   }
 
-  const query = nextParams.toString()
+  const query = nextParams.toString();
 
-  return query ? `?${query}` : "?"
+  return query ? `?${query}` : "?";
 }

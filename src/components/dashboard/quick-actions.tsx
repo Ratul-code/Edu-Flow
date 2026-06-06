@@ -23,6 +23,14 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type DueLedgerOption = {
   dueAmount: number | string
@@ -146,16 +154,19 @@ function BatchDialog() {
           </Field>
           <Field>
             <FieldLabel htmlFor="qa-batch-medium">Medium</FieldLabel>
-            <select
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              id="qa-batch-medium"
-              name="medium"
-            >
-              <option value="">Not set</option>
-              <option value="Bangla Medium">Bangla Medium</option>
-              <option value="English Version">English Version</option>
-              <option value="English Medium">English Medium</option>
-            </select>
+            <Select defaultValue="" name="medium">
+              <SelectTrigger className="h-8 w-full" id="qa-batch-medium">
+                <SelectValue placeholder="Not set" />
+              </SelectTrigger>
+              <SelectContent align="start">
+                <SelectGroup>
+                  <SelectItem value="">Not set</SelectItem>
+                  <SelectItem value="Bangla Medium">Bangla Medium</SelectItem>
+                  <SelectItem value="English Version">English Version</SelectItem>
+                  <SelectItem value="English Medium">English Medium</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </Field>
         </FieldGroup>
         <DialogFooter>
@@ -179,19 +190,21 @@ function PaymentDialog({ dueLedgers }: { dueLedgers: DueLedgerOption[] }) {
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="qa-ledger">Student ledger</FieldLabel>
-            <select
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              id="qa-ledger"
-              name="ledger_id"
-              required
-            >
-              <option value="">Select due ledger</option>
-              {dueLedgers.map((ledger) => (
-                <option key={ledger.id} value={ledger.id}>
-                  {ledger.studentName} - Due {formatTaka(ledger.dueAmount)}
-                </option>
-              ))}
-            </select>
+            <Select defaultValue="" name="ledger_id" required>
+              <SelectTrigger className="h-8 w-full" id="qa-ledger">
+                <SelectValue placeholder="Select due ledger" />
+              </SelectTrigger>
+              <SelectContent align="start">
+                <SelectGroup>
+                  <SelectItem value="">Select due ledger</SelectItem>
+                  {dueLedgers.map((ledger) => (
+                    <SelectItem key={ledger.id} value={ledger.id}>
+                      {ledger.studentName} - Due {formatTaka(ledger.dueAmount)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </Field>
           <Field>
             <FieldLabel htmlFor="qa-payment-amount">Amount</FieldLabel>
@@ -206,19 +219,21 @@ function PaymentDialog({ dueLedgers }: { dueLedgers: DueLedgerOption[] }) {
           </Field>
           <Field>
             <FieldLabel htmlFor="qa-payment-method">Method</FieldLabel>
-            <select
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              defaultValue="cash"
-              id="qa-payment-method"
-              name="method"
-            >
-              <option value="cash">Cash</option>
-              <option value="bkash">bKash</option>
-              <option value="nagad">Nagad</option>
-              <option value="bank">Bank</option>
-              <option value="card">Card</option>
-              <option value="other">Other</option>
-            </select>
+            <Select defaultValue="cash" name="method">
+              <SelectTrigger className="h-8 w-full" id="qa-payment-method">
+                <SelectValue placeholder="Cash" />
+              </SelectTrigger>
+              <SelectContent align="start">
+                <SelectGroup>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bkash">bKash</SelectItem>
+                  <SelectItem value="nagad">Nagad</SelectItem>
+                  <SelectItem value="bank">Bank</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </Field>
         </FieldGroup>
         <DialogFooter>

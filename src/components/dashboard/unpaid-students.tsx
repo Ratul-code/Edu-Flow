@@ -16,6 +16,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { DueStudentLedger } from "@/lib/data/dashboard"
 
 type UnpaidStudentsProps = {
@@ -111,18 +119,24 @@ function UnpaidStudentsModal({ students }: UnpaidStudentsProps) {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        <Select
           value={classLevel}
-          onChange={(event) => setClassLevel(event.target.value)}
+          onValueChange={(value) => setClassLevel(value ?? "")}
         >
-          <option value="">All classes</option>
-          {classLevels.map((level) => (
-            <option key={level} value={level.toLowerCase()}>
-              {level}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="h-8 w-full">
+            <SelectValue placeholder="All classes" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="">All classes</SelectItem>
+              {classLevels.map((level) => (
+                <SelectItem key={level} value={level.toLowerCase()}>
+                  {level}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="max-h-[420px] overflow-y-auto rounded-lg border p-3">

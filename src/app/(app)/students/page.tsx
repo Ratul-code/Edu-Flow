@@ -1,3 +1,5 @@
+import { Suspense } from "react"
+
 import { PageHeader } from "@/components/app/page-header"
 import { StudentCreateSheet } from "@/components/students/student-form"
 import { StudentListFilters } from "@/components/students/student-list-filters"
@@ -12,16 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
 import { createStudent } from "@/lib/actions/students"
 import { requireAdminContext } from "@/lib/auth/user"
-import { listBatches } from "@/lib/data/batches"
 import {
-  listStudentClassLevels,
-  listStudentGroups,
-  listStudentMediums,
-  listStudentBatchIds,
-  listStudentTags,
-  listStudentsPage,
+  getCachedStudentsFilterOptions,
+  getCachedStudentsRouteData,
   type StudentStatus,
 } from "@/lib/data/students"
 import Link from "next/link"
@@ -47,37 +45,10 @@ export default async function StudentsPage({
     status: statusParam(params.status),
     tag: stringParam(params.tag),
   }
-  const [studentPage, classLevels, mediums, groups, tags, batches] = await Promise.all([
-    listStudentsPage(admin.tenantId, filters, {
-      page,
-      pageSize: studentsPerPage,
-    }),
-    listStudentClassLevels(admin.tenantId),
-    listStudentMediums(admin.tenantId),
-    listStudentGroups(admin.tenantId),
-    listStudentTags(admin.tenantId),
-    listBatches(admin.tenantId, { status: "active" }),
-  ])
-  const { students, totalCount } = studentPage
-  const totalPages = Math.max(Math.ceil(totalCount / studentsPerPage), 1)
-
-  if (page > totalPages && totalCount > 0) {
-    redirect(pageHref(params, totalPages))
-  }
-
-  const assignedBatchIdsByStudent = Object.fromEntries(
-    await Promise.all(
-      students.map(async (student) => [
-        student.id,
-        await listStudentBatchIds(admin.tenantId, student.id),
-      ])
-    )
-  )
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        badge={`${totalCount} found`}
         description="Create, search, edit, and archive tenant-isolated student records."
         title="Students"
       />
@@ -91,46 +62,170 @@ export default async function StudentsPage({
             </CardDescription>
           </div>
           <CardAction>
-            <StudentCreateSheet action={createStudent} batches={batches} />
+            <Suspense fallback={<Button disabled>New student</Button>}>
+              <StudentCreateAction tenantId={admin.tenantId} />
+            </Suspense>
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <StudentListFilters
-            classLevels={classLevels}
-            filters={filters}
-            groups={groups}
-            mediums={mediums}
-            tags={tags}
-          />
-          {students.length ? (
-            <>
-              <StudentsTable
-                assignedBatchIdsByStudent={assignedBatchIdsByStudent}
-                batches={batches}
-                currentPath={pageHref(params, page)}
-                students={students}
-              />
-              <StudentsPagination
-                currentPage={page}
-                pageSize={studentsPerPage}
-                params={params}
-                totalCount={totalCount}
-                totalPages={totalPages}
-              />
-            </>
-          ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>No students found</EmptyTitle>
-                <EmptyDescription>
-                  Add a student or adjust the search and filters.
-                </EmptyDescription>
-              </EmptyHeader>
-              <StudentCreateSheet action={createStudent} batches={batches} />
-            </Empty>
-          )}
+          <Suspense fallback={<StudentsContentSkeleton />}>
+            <StudentsContent
+              filters={filters}
+              page={page}
+              params={params}
+              tenantId={admin.tenantId}
+            />
+          </Suspense>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+async function StudentCreateAction({ tenantId }: { tenantId: string }) {
+  const { batches } = await getCachedStudentsRouteData(
+    tenantId,
+    { status: "all" },
+    { page: 1, pageSize: studentsPerPage }
+  )
+
+  return <StudentCreateSheet action={createStudent} batches={batches} />
+}
+
+async function StudentsContent({
+  filters,
+  page,
+  params,
+  tenantId,
+}: {
+  filters: {
+    classLevel?: string
+    groupName?: string
+    medium?: string
+    search?: string
+    status: StudentStatus | "all"
+    tag?: string
+  }
+  page: number
+  params: Record<string, string | string[] | undefined>
+  tenantId: string
+}) {
+  const { classLevels, groups, mediums, tags } =
+    await getCachedStudentsFilterOptions(tenantId)
+
+  return (
+    <>
+      <StudentListFilters
+        classLevels={classLevels}
+        filters={filters}
+        groups={groups}
+        mediums={mediums}
+        tags={tags}
+      />
+      <Suspense fallback={<StudentsResultsSkeleton />} key={studentsContentKey(params)}>
+        <StudentsResults
+          filters={filters}
+          page={page}
+          params={params}
+          tenantId={tenantId}
+        />
+      </Suspense>
+    </>
+  )
+}
+
+async function StudentsResults({
+  filters,
+  page,
+  params,
+  tenantId,
+}: {
+  filters: {
+    classLevel?: string
+    groupName?: string
+    medium?: string
+    search?: string
+    status: StudentStatus | "all"
+    tag?: string
+  }
+  page: number
+  params: Record<string, string | string[] | undefined>
+  tenantId: string
+}) {
+  const { assignedBatchIdsByStudent, batches, studentPage } =
+    await getCachedStudentsRouteData(tenantId, filters, {
+      page,
+      pageSize: studentsPerPage,
+    })
+  const { students, totalCount } = studentPage
+  const totalPages = Math.max(Math.ceil(totalCount / studentsPerPage), 1)
+
+  if (page > totalPages && totalCount > 0) {
+    redirect(pageHref(params, totalPages))
+  }
+
+  return (
+    <>
+      {students.length ? (
+        <>
+          <StudentsTable
+            assignedBatchIdsByStudent={assignedBatchIdsByStudent}
+            batches={batches}
+            currentPath={pageHref(params, page)}
+            students={students}
+          />
+          <StudentsPagination
+            currentPage={page}
+            pageSize={studentsPerPage}
+            params={params}
+            totalCount={totalCount}
+            totalPages={totalPages}
+          />
+        </>
+      ) : (
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>No students found</EmptyTitle>
+            <EmptyDescription>
+              Add a student or adjust the search and filters.
+            </EmptyDescription>
+          </EmptyHeader>
+          <StudentCreateSheet action={createStudent} batches={batches} />
+        </Empty>
+      )}
+    </>
+  )
+}
+
+function StudentsContentSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <Skeleton className="h-10 flex-1 rounded-full" />
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton className="h-10 w-28 rounded-xl" key={index} />
+          ))}
+        </div>
+      </div>
+      <StudentsResultsSkeleton />
+    </div>
+  )
+}
+
+function StudentsResultsSkeleton() {
+  return (
+    <div className="rounded-lg border">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div
+          className="grid grid-cols-[3rem_1.5fr_repeat(5,1fr)] gap-4 border-b p-3 last:border-b-0"
+          key={index}
+        >
+          {Array.from({ length: 7 }).map((__, cellIndex) => (
+            <Skeleton className="h-5 rounded" key={cellIndex} />
+          ))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -247,6 +342,22 @@ function pageHref(
   const query = nextParams.toString()
 
   return query ? `/students?${query}` : "/students"
+}
+
+function studentsContentKey(
+  params: Record<string, string | string[] | undefined>
+) {
+  const keyParams = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(params).sort(([left], [right]) =>
+    left.localeCompare(right)
+  )) {
+    if (typeof value === "string" && value.trim()) {
+      keyParams.set(key, value)
+    }
+  }
+
+  return keyParams.toString()
 }
 
 function getVisiblePages(currentPage: number, totalPages: number) {

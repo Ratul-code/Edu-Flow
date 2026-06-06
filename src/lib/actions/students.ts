@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 import { requireAdminContext } from "@/lib/auth/user"
 import {
@@ -11,6 +11,7 @@ import {
 import { ensureStudentMonthlyLedger } from "@/lib/actions/fees"
 import { createClient } from "@/lib/supabase/server"
 import { redirectWithFlashToast } from "@/lib/flash-toast"
+import { STUDENTS_ROUTE_CACHE_TAG } from "@/lib/data/students"
 import {
   formatZodErrors,
   studentSchema,
@@ -60,6 +61,7 @@ export async function createStudent(
   await syncStudentBatchAssignments(admin.tenantId, created.id, formData)
   await ensureStudentMonthlyLedger(created.id, startingFeeMonth)
 
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/students")
   revalidatePath("/fees")
   redirectWithFlashToast(`/students/${created.id}`, {
@@ -92,6 +94,7 @@ export async function updateStudent(
 
   const returnPath = stringField(formData, "return_path") || `/students/${studentId}`
 
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/students")
   revalidatePath(`/students/${studentId}`)
   redirectWithFlashToast(returnPath, {
@@ -114,6 +117,7 @@ export async function archiveStudent(studentId: string, formData?: FormData) {
     throw new Error(error.message)
   }
 
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/students")
   revalidatePath(`/students/${studentId}`)
   redirectWithFlashToast(stringField(formData, "return_path") || "/students", {

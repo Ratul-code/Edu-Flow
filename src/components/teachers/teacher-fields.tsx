@@ -1,5 +1,13 @@
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { TeacherRecord } from "@/lib/data/teachers"
 
@@ -68,17 +76,21 @@ export function TeacherFields({ errors, teacher }: TeacherFieldsProps) {
       </Field>
       <Field data-invalid={Boolean(errors?.status)}>
         <FieldLabel htmlFor="status">Status</FieldLabel>
-        <select
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          defaultValue={teacher?.status ?? "active"}
-          id="status"
-          name="status"
-          aria-invalid={Boolean(errors?.status)}
-          required
-        >
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-        </select>
+        <Select defaultValue={teacher?.status ?? "active"} name="status" required>
+          <SelectTrigger
+            aria-invalid={Boolean(errors?.status)}
+            className="h-8 w-full"
+            id="status"
+          >
+            <SelectValue placeholder="Active" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <FieldError>{fieldError(errors?.status)}</FieldError>
       </Field>
       <Field className="sm:col-span-2" data-invalid={Boolean(errors?.notes)}>

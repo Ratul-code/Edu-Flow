@@ -1,3 +1,6 @@
+import { unstable_cache } from "next/cache"
+
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
 export type BatchStatus = "active" | "archived"
@@ -67,6 +70,21 @@ export type BatchListFilters = {
   status?: BatchStatus | "all"
 }
 
+export type BatchesRouteData = {
+  batches: BatchRecord[]
+  classLevels: string[]
+  groups: string[]
+  mediums: string[]
+}
+
+export type BatchesFilterOptions = {
+  classLevels: string[]
+  groups: string[]
+  mediums: string[]
+}
+
+export const BATCHES_ROUTE_CACHE_TAG = "batches-route"
+
 const batchSelect = `
   id,
   tenant_id,
@@ -85,6 +103,170 @@ const batchSelect = `
     name
   )
 `
+
+export const getCachedBatchesRouteData = unstable_cache(
+  async function getCachedBatchesRouteData(
+    tenantId: string,
+    filters: BatchListFilters = {}
+  ): Promise<BatchesRouteData> {
+    const supabase = createAdminClient()
+    let batchesQuery = supabase
+      .from("batches")
+      .select(batchSelect)
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(100)
+
+    if (filters.status && filters.status !== "all") {
+      batchesQuery = batchesQuery.eq("status", filters.status)
+    }
+
+    if (filters.classLevel) {
+      batchesQuery = batchesQuery.eq("class_level", filters.classLevel)
+    }
+
+    if (filters.medium) {
+      batchesQuery = batchesQuery.eq("medium", filters.medium)
+    }
+
+    if (filters.groupName) {
+      batchesQuery = batchesQuery.eq("group_name", filters.groupName)
+    }
+
+    const search = sanitizeSearchTerm(filters.search)
+
+    if (search) {
+      batchesQuery = batchesQuery.ilike("name", `%${search}%`)
+    }
+
+    const [batchesResult, classLevelsResult, mediumsResult, groupsResult] =
+      await Promise.all([
+        batchesQuery,
+        supabase
+          .from("batches")
+          .select("class_level")
+          .eq("tenant_id", tenantId)
+          .not("class_level", "is", null)
+          .order("class_level", { ascending: true }),
+        supabase
+          .from("batches")
+          .select("medium")
+          .eq("tenant_id", tenantId)
+          .not("medium", "is", null)
+          .order("medium", { ascending: true }),
+        supabase
+          .from("batches")
+          .select("group_name")
+          .eq("tenant_id", tenantId)
+          .not("group_name", "is", null)
+          .order("group_name", { ascending: true }),
+      ])
+
+    return {
+      batches:
+        batchesResult.error || !batchesResult.data
+          ? []
+          : (batchesResult.data as unknown as RawBatchRecord[]).map(
+              normalizeBatch
+            ),
+      classLevels: distinctValues(classLevelsResult.data, "class_level"),
+      groups: distinctValues(groupsResult.data, "group_name"),
+      mediums: distinctValues(mediumsResult.data, "medium"),
+    }
+  },
+  ["batches-route-data"],
+  {
+    revalidate: 60 * 60,
+    tags: [BATCHES_ROUTE_CACHE_TAG],
+  }
+)
+
+export const getCachedBatchesFilterOptions = unstable_cache(
+  async function getCachedBatchesFilterOptions(
+    tenantId: string
+  ): Promise<BatchesFilterOptions> {
+    const supabase = createAdminClient()
+    const [classLevelsResult, mediumsResult, groupsResult] = await Promise.all([
+      supabase
+        .from("batches")
+        .select("class_level")
+        .eq("tenant_id", tenantId)
+        .not("class_level", "is", null)
+        .order("class_level", { ascending: true }),
+      supabase
+        .from("batches")
+        .select("medium")
+        .eq("tenant_id", tenantId)
+        .not("medium", "is", null)
+        .order("medium", { ascending: true }),
+      supabase
+        .from("batches")
+        .select("group_name")
+        .eq("tenant_id", tenantId)
+        .not("group_name", "is", null)
+        .order("group_name", { ascending: true }),
+    ])
+
+    return {
+      classLevels: distinctValues(classLevelsResult.data, "class_level"),
+      groups: distinctValues(groupsResult.data, "group_name"),
+      mediums: distinctValues(mediumsResult.data, "medium"),
+    }
+  },
+  ["batches-filter-options"],
+  {
+    revalidate: 60 * 60,
+    tags: [BATCHES_ROUTE_CACHE_TAG],
+  }
+)
+
+export const getCachedBatchesList = unstable_cache(
+  async function getCachedBatchesList(
+    tenantId: string,
+    filters: BatchListFilters = {}
+  ): Promise<BatchRecord[]> {
+    const supabase = createAdminClient()
+    let query = supabase
+      .from("batches")
+      .select(batchSelect)
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(100)
+
+    if (filters.status && filters.status !== "all") {
+      query = query.eq("status", filters.status)
+    }
+
+    if (filters.classLevel) {
+      query = query.eq("class_level", filters.classLevel)
+    }
+
+    if (filters.medium) {
+      query = query.eq("medium", filters.medium)
+    }
+
+    if (filters.groupName) {
+      query = query.eq("group_name", filters.groupName)
+    }
+
+    const search = sanitizeSearchTerm(filters.search)
+
+    if (search) {
+      query = query.ilike("name", `%${search}%`)
+    }
+
+    const { data, error } = await query
+
+    return error || !data
+      ? []
+      : (data as unknown as RawBatchRecord[]).map(normalizeBatch)
+  },
+  ["batches-list"],
+  {
+    revalidate: 60 * 60,
+    tags: [BATCHES_ROUTE_CACHE_TAG],
+  }
+)
 
 export async function listBatches(
   tenantId: string,
@@ -306,4 +488,28 @@ function firstNested<T>(value: T | T[] | null | undefined) {
 
 function sanitizeSearchTerm(value?: string) {
   return value?.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ")
+}
+
+function distinctValues<T extends string>(
+  rows: unknown,
+  field: T
+): string[] {
+  if (!Array.isArray(rows)) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      rows
+        .map((row) =>
+          typeof row === "object" && row !== null
+            ? (row as Record<T, unknown>)[field]
+            : null
+        )
+        .filter(
+          (value): value is string =>
+            typeof value === "string" && Boolean(value.trim())
+        )
+    )
+  )
 }
