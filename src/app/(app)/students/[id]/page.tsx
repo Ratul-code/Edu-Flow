@@ -1,47 +1,47 @@
-import { notFound } from "next/navigation"
+import { notFound } from "next/navigation";
 
-import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
-import { PageHeader } from "@/components/app/page-header"
-import { StatusBadge } from "@/components/app/status-badge"
-import { StudentEditSheet } from "@/components/students/student-form"
-import { StudentFeeHistory } from "@/components/students/student-fee-history"
+import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog";
+import { PageHeader } from "@/components/app/page-header";
+import { StatusBadge } from "@/components/app/status-badge";
+import { StudentFeeHistory } from "@/components/students/student-fee-history";
+import { StudentEditSheet } from "@/components/students/student-form";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { updateStudent, archiveStudent } from "@/lib/actions/students"
-import { requireAdminContext } from "@/lib/auth/user"
-import { listBatches } from "@/lib/data/batches"
-import { getStudentFeeHistory } from "@/lib/data/fees"
-import { getStudentById, listStudentBatchIds } from "@/lib/data/students"
+} from "@/components/ui/card";
+import { archiveStudent, updateStudent } from "@/lib/actions/students";
+import { requireAdminContext } from "@/lib/auth/user";
+import { listBatches } from "@/lib/data/batches";
+import { getStudentFeeHistory } from "@/lib/data/fees";
+import { getStudentById, listStudentBatchIds } from "@/lib/data/students";
 
 type StudentDetailPageProps = {
-  params: Promise<{ id: string }>
-}
+  params: Promise<{ id: string; }>;
+};
 
 export default async function StudentDetailPage({
   params,
 }: StudentDetailPageProps) {
-  const admin = await requireAdminContext()
-  const { id } = await params
+  const admin = await requireAdminContext();
+  const { id } = await params;
   const [student, batches, assignedBatchIds] = await Promise.all([
     getStudentById(admin.tenantId, id),
     listBatches(admin.tenantId, { status: "active" }),
     listStudentBatchIds(admin.tenantId, id),
-  ])
+  ]);
 
   if (!student) {
-    notFound()
+    notFound();
   }
 
   const feeHistory = await getStudentFeeHistory(
     admin.tenantId,
     student.id,
     student.admission_date
-  )
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -117,22 +117,22 @@ export default async function StudentDetailPage({
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 function DetailItem({
   label,
   value,
 }: {
-  label: string
-  value: React.ReactNode
+  label: string;
+  value: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <span className="text-sm">{value || "-"}</span>
     </div>
-  )
+  );
 }
 
 function formatDate(value: string) {
@@ -140,5 +140,5 @@ function formatDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(value))
+  }).format(new Date(value));
 }
