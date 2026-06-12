@@ -1,29 +1,31 @@
-"use client";
+"use client"
 
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react"
 import {
+  BanknoteIcon,
+  BellIcon,
+  BookOpenIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
+  CreditCardIcon,
   GraduationCapIcon,
-  LayoutDashboard,
-  PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
-  ReceiptTextIcon,
-  SendIcon,
+  LayoutDashboardIcon,
   SettingsIcon,
-  UserRoundIcon,
-  UsersRoundIcon
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+  UsersRoundIcon,
+  ZapIcon,
+} from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useState } from "react"
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -31,208 +33,207 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+  SidebarSeparator,
+} from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
 const navItems = [
   {
     title: "Dashboard",
     href: "/dashboard",
-    icon: LayoutDashboard,
+    icon: LayoutDashboardIcon,
   },
   {
     title: "Students",
     href: "/students",
-    icon: UserRoundIcon,
+    icon: UsersRoundIcon,
   },
   {
     title: "Batches",
     href: "/batches",
-    icon: UsersRoundIcon,
+    icon: BookOpenIcon,
   },
   {
     title: "Teachers",
     href: "/teachers",
-    icon: UserRoundIcon,
+    icon: GraduationCapIcon,
+  },
+  {
+    title: "Schedule",
+    href: "/schedule",
+    icon: BellIcon,
   },
   {
     title: "Notifications",
     href: "/notifications",
-    icon: SendIcon,
+    icon: BellIcon,
+    badge: "3",
   },
   {
     title: "Settings",
     href: "/settings",
     icon: SettingsIcon,
   },
-];
+]
 
 const feeSubItems = [
   {
-    title: "Student",
+    title: "Student Fees",
     href: "/fees",
+    icon: CreditCardIcon,
   },
   {
-    title: "Teacher",
+    title: "Teacher Salaries",
     href: "/salaries",
+    icon: BanknoteIcon,
   },
-];
+]
 
 export function AppSidebar() {
-  const pathname = usePathname();
-  const { state, toggleSidebar } = useSidebar();
+  const pathname = usePathname()
   const feesGroupActive = feeSubItems.some((item) =>
     isRouteActive(pathname, item.href)
-  );
-  const [feesOpen, setFeesOpen] = useState(false);
-  const showFees = feesGroupActive || feesOpen;
-  const collapsed = state === "collapsed";
+  )
+  const [feesOpen, setFeesOpen] = useState(feesGroupActive)
+  const showFees = feesGroupActive || feesOpen
 
   return (
-    <Sidebar
-      className="border-r border-[#edf0f5] bg-white overflow-visible"
-      collapsible="icon"
-    >
-      <SidebarHeader className="relative px-5 pt-7 pb-8 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pt-5 group-data-[collapsible=icon]:pb-6">
-        <button
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="absolute top-7 -right-3 z-20 flex size-7 items-center justify-center rounded-full border border-[#edf0f5] bg-white text-[#626a77] shadow-sm transition-colors hover:border-primary/20 hover:bg-primary/5 hover:text-primary group-data-[collapsible=icon]:top-6"
-          onClick={toggleSidebar}
-          type="button"
-        >
-          {collapsed ? (
-            <PanelLeftOpenIcon className="size-4" strokeWidth={1.9} />
-          ) : (
-            <PanelLeftCloseIcon className="size-4" strokeWidth={1.9} />
-          )}
-        </button>
+    <Sidebar className="border-r-0" collapsible="icon">
+      <SidebarHeader className="px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              className="h-auto  gap-3 p-0 hover:bg-transparent data-active:bg-transparent group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! [&_svg]:size-8 group-data-[collapsible=icon]:[&_svg]:size-6"
+              className="hover:bg-sidebar-accent/50 data-[state=open]:bg-sidebar-accent"
               render={<Link href="/dashboard" />}
+              size="lg"
               tooltip="Edu Flow"
             >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary group-data-[collapsible=icon]:size-10">
-                <GraduationCapIcon strokeWidth={1.8} />
-              </span>
-              {!collapsed ? (
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate text-lg font-semibold text-[#141821]">
-                    Edu Flow
-                  </span>
-                  <span className="truncate text-xs font-normal text-[#6d7480]">
-                    Coaching Management System
-                  </span>
+              <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <ZapIcon className="size-4" />
+              </div>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="text-sm font-semibold text-sidebar-foreground">
+                  Edu Flow
                 </span>
-              ) : null}
+                <span className="text-xs text-sidebar-foreground/60">
+                  Admin Dashboard
+                </span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="px-5 group-data-[collapsible=icon]:px-2">
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="sr-only">Workspace</SidebarGroupLabel>
+
+      <SidebarSeparator />
+
+      <SidebarContent className="px-2 py-2">
+        <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-2.5 group-data-[collapsible=icon]:items-center">
+            <SidebarMenu className="gap-0.5">
               <NavLink item={navItems[0]} pathname={pathname} />
               <NavLink item={navItems[1]} pathname={pathname} />
               <NavLink item={navItems[2]} pathname={pathname} />
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className={cn(
-                    navButtonClassName,
-                    feesGroupActive && "text-primary"
-                  )}
+                  className="cursor-pointer"
+                  isActive={feesGroupActive}
                   onClick={() => setFeesOpen((open) => !open)}
+                  tooltip="Fees & Salaries"
                   type="button"
                 >
-                  <ReceiptTextIcon strokeWidth={1.9} />
+                  <CreditCardIcon />
                   <span>Fees &amp; Salaries</span>
                   <ChevronDownIcon
                     className={cn(
-                      "ml-auto transition-transform group-data-[collapsible=icon]:hidden",
+                      "ml-auto transition-transform duration-200",
                       showFees && "rotate-180"
                     )}
                   />
                 </SidebarMenuButton>
                 {showFees ? (
-                  <SidebarMenuSub className="mt-1.5 ml-8 gap-1.5 border-l-0 px-0 py-0">
-                    {feeSubItems.map((item) => {
-                      const isActive = isRouteActive(pathname, item.href);
-
-                      return (
-                        <SidebarMenuSubItem key={item.href}>
-                          <SidebarMenuSubButton
-                            className="h-8 gap-3 rounded-lg px-3 text-[14px] font-medium text-[#626a77] hover:bg-primary/5 hover:text-primary data-active:bg-transparent data-active:text-primary"
-                            isActive={isActive}
-                            render={<Link href={item.href} />}
-                          >
-                            <span
-                              className={cn(
-                                "size-1.5 shrink-0 rounded-full bg-[#8c95a3]",
-                                isActive && "bg-primary"
-                              )}
-                            />
-                            <span>{item.title}</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      );
-                    })}
+                  <SidebarMenuSub>
+                    {feeSubItems.map((item) => (
+                      <SidebarMenuSubItem key={item.href}>
+                        <SidebarMenuSubButton
+                          className="cursor-pointer"
+                          isActive={isRouteActive(pathname, item.href)}
+                          render={<Link href={item.href} />}
+                        >
+                          <item.icon className="size-3.5" />
+                          <span>{item.title}</span>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
                   </SidebarMenuSub>
                 ) : null}
               </SidebarMenuItem>
-              <NavLink item={navItems[3]} pathname={pathname} />
-              <NavLink item={navItems[4]} pathname={pathname} />
-              <NavLink item={navItems[5]} pathname={pathname} />
+              {navItems.slice(3).map((item) => (
+                <NavLink item={item} key={item.href} pathname={pathname} />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-5 pb-5 group-data-[collapsible=icon]:hidden">
-        <div className="rounded-xl border border-[#edf0f5] bg-white p-4 shadow-[0_8px_30px_rgba(31,41,55,0.04)]">
-          <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <GraduationCapIcon strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-[#141821]">Admin workspace</p>
-          <p className="mt-1 text-xs leading-5 text-[#6d7480]">
-            Edu Flow coaching panel
-          </p>
-        </div>
+
+      <SidebarSeparator />
+
+      <SidebarFooter className="px-3 py-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton className="hover:bg-sidebar-accent/50" size="lg">
+              <Avatar className="size-8">
+                <AvatarFallback className="bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground">
+                  AD
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="text-sm font-medium text-sidebar-foreground">
+                  Admin
+                </span>
+                <span className="text-xs text-sidebar-foreground/60">
+                  Workspace
+                </span>
+              </div>
+              <ChevronRightIcon className="ml-auto size-4 text-sidebar-foreground/40" />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  );
+  )
 }
 
 type NavItem = {
-  href: string;
-  icon: LucideIcon;
-  title: string;
-};
+  badge?: string
+  href: string
+  icon: LucideIcon
+  title: string
+}
 
-const navButtonClassName =
-  "h-12 justify-start gap-3 rounded-full px-4 text-[15px] font-medium text-[#626a77] transition-colors hover:bg-primary/5 hover:text-primary data-active:bg-primary/10 data-active:font-semibold data-active:text-primary group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:[&>span]:hidden [&_svg]:size-5 [&>svg]:text-current";
-
-function NavLink({ item, pathname }: { item: NavItem; pathname: string; }) {
-  const Icon = item.icon;
-  const active = isRouteActive(pathname, item.href);
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const Icon = item.icon
+  const active = isRouteActive(pathname, item.href)
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        className={navButtonClassName}
+        className="cursor-pointer"
         isActive={active}
         render={<Link href={item.href} />}
         tooltip={item.title}
       >
-        <Icon strokeWidth={1.9} />
+        <Icon />
         <span>{item.title}</span>
+        {item.badge ? (
+          <Badge className="ml-auto h-4 px-1.5 text-[10px] leading-none">
+            {item.badge}
+          </Badge>
+        ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
-  );
+  )
 }
 
 function isRouteActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return pathname === href || pathname.startsWith(`${href}/`)
 }

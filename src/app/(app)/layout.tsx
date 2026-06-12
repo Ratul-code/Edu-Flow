@@ -12,19 +12,20 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider
-      className="h-svh min-h-0 overflow-hidden"
+      className="h-svh min-h-0 overflow-hidden bg-background"
       style={
         {
-          "--sidebar-width-icon": "4.75rem",
+          "--sidebar-width": "16rem",
+          "--sidebar-width-icon": "3rem",
         } as React.CSSProperties
       }
     >
       <AppSidebar />
       <SidebarInset className="min-h-0 overflow-hidden">
         <Topbar admin={admin} />
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto bg-muted/20 p-4 md:p-6">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {children}
-        </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )

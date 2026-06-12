@@ -1,7 +1,7 @@
 "use client"
 
 import { PencilIcon } from "lucide-react"
-import { useState } from "react"
+import { useState, type ReactElement } from "react"
 
 import { StudentFields } from "@/components/students/student-fields"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,7 @@ type StudentEditSheetClientProps = {
   returnPath?: string
   student: StudentRecord
   tableExists: boolean
+  trigger?: ReactElement
   triggerSize?: "default" | "icon-sm"
 }
 
@@ -48,6 +49,7 @@ export function StudentEditSheetClient({
   returnPath,
   student,
   tableExists,
+  trigger,
   triggerSize = "default",
 }: StudentEditSheetClientProps) {
   const [open, setOpen] = useState(false)
@@ -84,11 +86,14 @@ export function StudentEditSheetClient({
       >
         <SheetTrigger
           render={
-            <Button
-              size={triggerSize}
-              type="button"
-              variant={triggerSize === "icon-sm" ? "ghost" : "default"}
-            />
+            trigger ?? (
+              <Button
+                className={triggerSize === "icon-sm" ? "size-7 cursor-pointer" : undefined}
+                size={triggerSize}
+                type="button"
+                variant={triggerSize === "icon-sm" ? "ghost" : "default"}
+              />
+            )
           }
         >
           <PencilIcon data-icon={triggerSize === "icon-sm" ? undefined : "inline-start"} />
@@ -117,6 +122,7 @@ export function StudentEditSheetClient({
                 batches={batches}
                 classLevels={classLevels}
                 groupOptions={groupOptions}
+                showBatchAssignments={false}
                 student={student}
                 tableExists={tableExists}
               />

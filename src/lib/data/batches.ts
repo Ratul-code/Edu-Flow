@@ -41,6 +41,9 @@ export type StudentBatchRecord = {
     name: string
     phone: string | null
     class_level: string | null
+    medium: string | null
+    group_name: string | null
+    tags?: string[] | null
     status: string
   } | null
 }
@@ -377,6 +380,9 @@ export async function listBatchAssignments(tenantId: string, batchId: string) {
           name,
           phone,
           class_level,
+          medium,
+          group_name,
+          tags,
           status
         )
       `

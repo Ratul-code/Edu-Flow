@@ -49,6 +49,7 @@ export function ArchiveConfirmDialog({
         render={
           trigger ?? (
             <Button
+              className={triggerSize === "icon-sm" ? "size-7 cursor-pointer" : undefined}
               type="button"
               variant={triggerSize === "icon-sm" ? "ghost" : "outline"}
               size={triggerSize}

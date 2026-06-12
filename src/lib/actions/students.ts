@@ -8,7 +8,10 @@ import {
   currentMonthStart,
   monthStart,
 } from "@/lib/data/fees"
-import { ensureStudentMonthlyLedger } from "@/lib/actions/fees"
+import {
+  ensureStudentMonthlyLedger,
+  recalculateCurrentStudentMonthlyLedger,
+} from "@/lib/actions/fees"
 import { createClient } from "@/lib/supabase/server"
 import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { STUDENTS_ROUTE_CACHE_TAG } from "@/lib/data/students"
@@ -93,12 +96,13 @@ export async function updateStudent(
     throw new Error(error.message)
   }
 
-  await syncStudentBatchAssignments(admin.tenantId, studentId, formData)
-
   const returnPath = stringField(formData, "return_path") || `/students/${studentId}`
+  await syncStudentBatchAssignments(admin.tenantId, studentId, formData)
+  await recalculateCurrentStudentMonthlyLedger(studentId, returnPath)
 
   revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
   revalidatePath("/students")
+  revalidatePath("/fees")
   revalidatePath(`/students/${studentId}`)
   redirectWithFlashToast(returnPath, {
     title: "Student updated",
@@ -127,6 +131,94 @@ export async function archiveStudent(studentId: string, formData?: FormData) {
     title: "Student archived",
     message: "The student has been moved out of the active list.",
     tone: "archive",
+  })
+}
+
+export async function assignBatchToStudent(
+  studentId: string,
+  formData: FormData
+) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const batchId = stringField(formData, "batch_id")
+
+  if (!batchId) {
+    throw new Error("Select a batch.")
+  }
+
+  const { data: batch, error: batchError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("tenant_id", admin.tenantId)
+    .eq("id", batchId)
+    .eq("status", "active")
+    .maybeSingle()
+
+  if (batchError || !batch) {
+    throw new Error("Select an active batch.")
+  }
+
+  const { error } = await supabase.from("student_batches").upsert(
+    {
+      tenant_id: admin.tenantId,
+      student_id: studentId,
+      batch_id: batchId,
+      joined_at: new Date().toISOString().slice(0, 10),
+      status: "active",
+    },
+    { onConflict: "tenant_id,student_id,batch_id" }
+  )
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const feeStartMonth = assignmentFeeStartMonth(formData)
+  if (feeStartMonth === currentMonthStart()) {
+    await recalculateCurrentStudentMonthlyLedger(
+      studentId,
+      `/students/${studentId}`
+    )
+  } else {
+    await ensureStudentMonthlyLedger(studentId, feeStartMonth)
+  }
+
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath("/students")
+  revalidatePath("/fees")
+  revalidatePath(`/students/${studentId}`)
+  revalidatePath(`/batches/${batchId}`)
+  redirectWithFlashToast(`/students/${studentId}`, {
+    title: "Batch assigned",
+    message: "The student has been added to the selected batch.",
+    tone: "success",
+  })
+}
+
+export async function updateStudentNotes(
+  studentId: string,
+  formData: FormData
+) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const notes = stringField(formData, "notes")
+
+  const { error } = await supabase
+    .from("students")
+    .update({ notes: notes || null })
+    .eq("tenant_id", admin.tenantId)
+    .eq("id", studentId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath(`/students/${studentId}`)
+  redirectWithFlashToast(`/students/${studentId}`, {
+    title: "Notes saved",
+    message: "Student notes have been updated.",
+    tone: "success",
   })
 }
 
@@ -161,6 +253,10 @@ async function syncStudentBatchAssignments(
   studentId: string,
   formData: FormData
 ) {
+  if (stringField(formData, "batch_assignment_present") !== "1") {
+    return
+  }
+
   const supabase = await createClient()
   const selectedBatchIds = formData
     .getAll("batch_ids")
@@ -242,6 +338,12 @@ function studentFeeStartMonth(formData: FormData) {
   }
 
   return currentMonthStart()
+}
+
+function assignmentFeeStartMonth(formData: FormData) {
+  return stringField(formData, "fee_start_option") === "next"
+    ? addMonths(currentMonthStart(), 1)
+    : currentMonthStart()
 }
 
 function stringField(formData: FormData | undefined, key: string) {

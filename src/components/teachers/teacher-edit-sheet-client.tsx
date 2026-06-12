@@ -126,7 +126,7 @@ export function TeacherEditSheetClient({
             triggerVariant === "icon" ? (
               <Button size="icon-sm" variant="ghost" />
             ) : (
-              <Button />
+              <Button className="gap-1.5" size="sm" variant="outline" />
             )
           }
         >

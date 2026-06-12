@@ -1,10 +1,12 @@
-import { ReceiptTextIcon } from "lucide-react"
+import { CreditCardIcon } from "lucide-react"
 import Link from "next/link"
 
 import type { StudentLedgerRecord } from "@/lib/data/fees"
 import { feeStatusLabel } from "@/lib/fee-status"
 import { StatusBadge } from "@/components/app/status-badge"
 import { StudentPaymentReceiptDialog } from "@/components/receipts/student-payment-receipt-dialog"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -23,80 +25,91 @@ export function FeeLedgersTable({ ledgers }: FeeLedgersTableProps) {
   return (
     <Table>
       <TableHeader>
-        <TableRow>
-          <TableHead className="w-12 text-center">#</TableHead>
-          <TableHead>Student</TableHead>
-          <TableHead>Class</TableHead>
-          <TableHead>Expected</TableHead>
-          <TableHead>Discount</TableHead>
-          <TableHead>Paid</TableHead>
-          <TableHead>Due</TableHead>
-          <TableHead>Payment Window</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Action</TableHead>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="h-9 pl-4 text-xs font-medium">Student</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Batch / Fee Source</TableHead>
+          <TableHead className="h-9 text-right text-xs font-medium">Expected</TableHead>
+          <TableHead className="h-9 text-right text-xs font-medium">Paid</TableHead>
+          <TableHead className="h-9 text-right text-xs font-medium">Due</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Status</TableHead>
+          <TableHead className="h-9 text-right text-xs font-medium">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {ledgers.map((ledger, index) => (
+        {ledgers.map((ledger) => (
           <TableRow key={ledger.id}>
-            <TableCell className="text-center text-muted-foreground">
-              {index + 1}
+            <TableCell className="py-3 pl-4">
+              <div className="flex items-center gap-2">
+                <Avatar className="size-6">
+                  <AvatarFallback className="bg-muted text-[10px] font-semibold">
+                    {initials(ledger.student?.name ?? "Unknown student")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  {ledger.student?.id ? (
+                    <Link
+                      className="cursor-pointer text-sm font-medium leading-none hover:underline"
+                      href={`/students/${ledger.student.id}`}
+                    >
+                      {ledger.student.name}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium leading-none">
+                      Unknown student
+                    </span>
+                  )}
+                  {ledger.student?.phone ? (
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {ledger.student.phone}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </TableCell>
-            <TableCell className="font-medium">
-              {ledger.student?.id ? (
-                <Link
-                  className="text-emerald-800 hover:underline"
-                  href={`/students/${ledger.student.id}`}
-                >
-                  {ledger.student.name}
-                </Link>
-              ) : (
-                "Unknown student"
-              )}
-              {ledger.student?.phone ? (
-                <span className="block text-xs font-normal text-muted-foreground">
-                  {ledger.student.phone}
-                </span>
-              ) : null}
+            <TableCell className="py-3 text-xs text-muted-foreground">
+              <BatchChips batchNames={ledger.batch_names ?? []} />
             </TableCell>
-            <TableCell>{ledger.student?.class_level ?? "-"}</TableCell>
-            <TableCell>{formatTaka(ledger.expected_amount)}</TableCell>
-            <TableCell>{formatTaka(ledger.discount_amount)}</TableCell>
-            <TableCell>{formatTaka(ledger.paid_amount)}</TableCell>
-            <TableCell>{formatTaka(ledger.due_amount)}</TableCell>
-            <TableCell>
-              <span className="block text-sm">
-                {formatDate(ledger.payment_start_date)}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                Grace ends {formatDate(ledger.grace_end_date)}
-              </span>
+            <TableCell className="py-3 text-right text-sm">
+              {formatTaka(ledger.expected_amount)}
             </TableCell>
-            <TableCell>
+            <TableCell className="py-3 text-right text-sm font-medium">
+              <Amount
+                tone="paid"
+                value={ledger.paid_amount}
+              />
+            </TableCell>
+            <TableCell className="py-3 text-right text-sm font-medium">
+              <Amount tone="due" value={ledger.due_amount} />
+            </TableCell>
+            <TableCell className="py-3">
               <StatusBadge status={feeStatusLabel(ledger.status)} />
             </TableCell>
-            <TableCell>
-              <div className="flex flex-wrap justify-end gap-2">
+            <TableCell className="py-3">
+              <div className="flex items-center justify-end gap-1">
+                {Number(ledger.due_amount) > 0 ? (
+                  <Button
+                    className="gap-1 cursor-pointer"
+                    render={<Link href={`/fees/${ledger.id}/payment`} />}
+                    size="xs"
+                    variant="outline"
+                  >
+                    <CreditCardIcon className="size-3" data-icon="inline-start" />
+                    Pay
+                  </Button>
+                ) : null}
                 {ledger.status === "paid" && ledger.latest_payment ? (
                   <StudentPaymentReceiptDialog
                     paymentId={ledger.latest_payment.id}
                   />
                 ) : null}
-                {Number(ledger.due_amount) > 0 ? (
-                  <Button
-                    className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
-                    render={<Link href={`/fees/${ledger.id}/payment`} />}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <ReceiptTextIcon data-icon="inline-start" />
-                    Record payment
-                  </Button>
-                ) : (
-                  !ledger.latest_payment ? (
-                    <span className="text-sm text-muted-foreground">Settled</span>
-                  ) : null
-                )}
+                {ledger.status === "partial" && ledger.latest_payment ? (
+                  <StudentPaymentReceiptDialog
+                    paymentId={ledger.latest_payment.id}
+                  />
+                ) : null}
+                {Number(ledger.due_amount) <= 0 && !ledger.latest_payment ? (
+                  <span className="text-xs text-muted-foreground">Settled</span>
+                ) : null}
               </div>
             </TableCell>
           </TableRow>
@@ -110,9 +123,49 @@ function formatTaka(value: number | string) {
   return `৳${Number(value).toLocaleString("en-BD")}`
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-BD", {
-    day: "numeric",
-    month: "short",
-  }).format(new Date(`${value}T00:00:00`))
+function Amount({
+  tone,
+  value,
+}: {
+  tone: "due" | "paid"
+  value: number | string
+}) {
+  const amount = Number(value)
+
+  if (amount <= 0) {
+    return <span className="font-normal text-muted-foreground">৳0</span>
+  }
+
+  return (
+    <span className={tone === "paid" ? "text-success" : "text-destructive"}>
+      {formatTaka(value)}
+    </span>
+  )
+}
+
+function initials(name: string) {
+  const letters = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+
+  return letters.toUpperCase() || "ST"
+}
+
+function BatchChips({ batchNames }: { batchNames: string[] }) {
+  if (!batchNames.length) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  return (
+    <div className="flex max-w-64 flex-wrap gap-1">
+      {batchNames.map((name) => (
+        <Badge key={name} variant="secondary" className="text-xs font-normal">
+          {name}
+        </Badge>
+      ))}
+    </div>
+  )
 }

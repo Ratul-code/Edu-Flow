@@ -131,7 +131,8 @@ export const batchSchema = z.object({
     .trim()
     .min(1, "Batch name is required.")
     .max(100, "Batch name is too long."),
-  class_level: optionalText(50, "Class level is too long."),
+  class_level: requiredText("Class level", 50, "Class level is too long."),
+  subject: requiredText("Subjects", 100, "Subjects are too long."),
   monthly_fee: nonNegativeNumber("Monthly fee must be 0 or more."),
   medium: optionalText(50, "Medium is too long."),
   group_name: optionalText(50, "Group is too long."),

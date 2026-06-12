@@ -3,8 +3,16 @@
 import { revalidatePath, revalidateTag } from "next/cache"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import {
+  addMonths,
+  currentMonthStart,
+} from "@/lib/data/fees"
 import { BATCHES_ROUTE_CACHE_TAG } from "@/lib/data/batches"
 import { STUDENTS_ROUTE_CACHE_TAG } from "@/lib/data/students"
+import {
+  ensureStudentMonthlyLedger,
+  recalculateCurrentStudentMonthlyLedger,
+} from "@/lib/actions/fees"
 import { redirectWithFlashToast } from "@/lib/flash-toast"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -46,6 +54,16 @@ export async function updateBatch(batchId: string, formData: FormData) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
   const payload = batchPayloadFromForm(formData, admin.tenantId)
+  const { data: currentBatch, error: currentBatchError } = await supabase
+    .from("batches")
+    .select("monthly_fee")
+    .eq("tenant_id", admin.tenantId)
+    .eq("id", batchId)
+    .single()
+
+  if (currentBatchError) {
+    throw new Error(currentBatchError.message)
+  }
 
   const { error } = await supabase
     .from("batches")
@@ -55,6 +73,14 @@ export async function updateBatch(batchId: string, formData: FormData) {
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  if (Number(currentBatch.monthly_fee) !== Number(payload.monthly_fee)) {
+    await refreshBatchLedgersForFeeChange(
+      admin.tenantId,
+      batchId,
+      stringField(formData, "fee_start_option") === "next" ? "next" : "current"
+    )
   }
 
   revalidateTag(BATCHES_ROUTE_CACHE_TAG, { expire: 0 })
@@ -117,7 +143,17 @@ export async function assignStudentToBatch(batchId: string, formData: FormData) 
     throw new Error(error.message)
   }
 
+  const feeStartMonth = assignmentFeeStartMonth(formData)
+  await Promise.all(
+    data.student_ids.map((studentId) =>
+      feeStartMonth === currentMonthStart()
+        ? recalculateCurrentStudentMonthlyLedger(studentId, `/batches/${batchId}`)
+        : ensureStudentMonthlyLedger(studentId, feeStartMonth)
+    )
+  )
+
   revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath("/fees")
   revalidatePath(`/batches/${batchId}`)
 }
 
@@ -147,6 +183,53 @@ export async function updateStudentBatchFeeOverride(
   }
 
   revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath(`/batches/${batchId}`)
+}
+
+export async function updateBatchStudentFeeOverrides(
+  batchId: string,
+  formData: FormData
+) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const studentIds = formData
+    .getAll("student_ids")
+    .filter((value): value is string => typeof value === "string" && !!value)
+  const { fee_override: feeOverride } = parseFormData(
+    studentBatchFeeOverrideSchema,
+    formData
+  )
+
+  if (!studentIds.length) {
+    throw new Error("Select at least one student.")
+  }
+
+  const { error } = await supabase
+    .from("student_batches")
+    .update({
+      custom_fee_override: feeOverride,
+      fee_override: feeOverride,
+    })
+    .eq("tenant_id", admin.tenantId)
+    .eq("batch_id", batchId)
+    .eq("status", "active")
+    .in("student_id", studentIds)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const feeStartMonth = assignmentFeeStartMonth(formData)
+  await Promise.all(
+    studentIds.map((studentId) =>
+      feeStartMonth === currentMonthStart()
+        ? recalculateCurrentStudentMonthlyLedger(studentId, `/batches/${batchId}`)
+        : ensureStudentMonthlyLedger(studentId, feeStartMonth)
+    )
+  )
+
+  revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath("/fees")
   revalidatePath(`/batches/${batchId}`)
 }
 
@@ -249,8 +332,8 @@ function batchPayloadFromForm(formData: FormData, tenantId: string) {
 function batchPayload(data: BatchFormData) {
   return {
     name: data.name,
-    subject: null,
-    class_level: data.class_level || null,
+    subject: data.subject,
+    class_level: data.class_level,
     medium: data.medium || null,
     group_name: data.group_name || null,
     monthly_fee: data.monthly_fee,
@@ -261,6 +344,85 @@ function batchPayload(data: BatchFormData) {
 
 function today() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function assignmentFeeStartMonth(formData: FormData) {
+  return stringField(formData, "fee_start_option") === "next"
+    ? addMonths(currentMonthStart(), 1)
+    : currentMonthStart()
+}
+
+async function refreshBatchLedgersForFeeChange(
+  tenantId: string,
+  batchId: string,
+  timing: "current" | "next"
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_batches")
+    .select("student_id")
+    .eq("tenant_id", tenantId)
+    .eq("batch_id", batchId)
+    .eq("status", "active")
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const studentIds = Array.from(
+    new Set((data ?? []).map((assignment) => assignment.student_id))
+  )
+
+  if (!studentIds.length) {
+    return
+  }
+
+  const ledgerMonth =
+    timing === "next" ? addMonths(currentMonthStart(), 1) : currentMonthStart()
+  const refreshStudentIds =
+    timing === "next"
+      ? studentIds
+      : await unpaidCurrentLedgerStudentIds(tenantId, studentIds, ledgerMonth)
+
+  if (!refreshStudentIds.length) {
+    return
+  }
+
+  await Promise.all(
+    refreshStudentIds.map((studentId) =>
+      timing === "next"
+        ? ensureStudentMonthlyLedger(studentId, ledgerMonth)
+        : recalculateCurrentStudentMonthlyLedger(studentId, `/batches/${batchId}`)
+    )
+  )
+
+  revalidatePath("/fees")
+}
+
+async function unpaidCurrentLedgerStudentIds(
+  tenantId: string,
+  studentIds: string[],
+  ledgerMonth: string
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_monthly_ledgers")
+    .select("student_id, status")
+    .eq("tenant_id", tenantId)
+    .eq("ledger_month", ledgerMonth)
+    .in("student_id", studentIds)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const paidStudentIds = new Set(
+    (data ?? [])
+      .filter((ledger) => ledger.status === "paid" || ledger.status === "waived")
+      .map((ledger) => ledger.student_id)
+  )
+
+  return studentIds.filter((studentId) => !paidStudentIds.has(studentId))
 }
 
 function stringField(formData: FormData | undefined, key: string) {

@@ -82,14 +82,14 @@ export function StudentListFilters({
 
   return (
     <form
-      className="flex flex-col gap-3 lg:flex-row lg:items-center"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => event.preventDefault()}
       role="search"
     >
-      <div className="relative min-w-0 flex-1">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative min-w-[200px] max-w-xs flex-1">
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="h-10 rounded-full pl-10 text-sm"
+          className="h-8 pl-8 text-sm"
           aria-busy={isPending}
           name="q"
           onChange={(event) => setSearch(event.target.value)}
@@ -97,13 +97,13 @@ export function StudentListFilters({
           value={search}
         />
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           name="classLevel"
           onValueChange={(value) => replaceParam("classLevel", value ?? "")}
           value={filters.classLevel ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-full sm:w-[130px]" size="sm">
             <SelectValue placeholder="All classes" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -122,7 +122,7 @@ export function StudentListFilters({
           onValueChange={(value) => replaceParam("medium", value ?? "")}
           value={filters.medium ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-40">
+          <SelectTrigger className="h-8 w-full sm:w-[120px]" size="sm">
             <SelectValue placeholder="All mediums" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -141,7 +141,7 @@ export function StudentListFilters({
           onValueChange={(value) => replaceParam("groupName", value ?? "")}
           value={filters.groupName ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-full sm:w-[120px]" size="sm">
             <SelectValue placeholder="All groups" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -160,7 +160,7 @@ export function StudentListFilters({
           onValueChange={(value) => replaceParam("tag", value ?? "")}
           value={filters.tag ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-full sm:w-[110px]" size="sm">
             <SelectValue placeholder="All tags" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -179,7 +179,7 @@ export function StudentListFilters({
           onValueChange={(value) => replaceParam("status", value ?? "")}
           value={filters.status ?? "all"}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-full sm:w-[120px]" size="sm">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -191,8 +191,9 @@ export function StudentListFilters({
           </SelectContent>
         </Select>
         <Button
-          className="px-4 text-sm"
+          className="ml-auto gap-1.5"
           render={<Link href="/students" />}
+          size="sm"
           variant="outline"
         >
           <XIcon data-icon="inline-start" />

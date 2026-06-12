@@ -7,11 +7,7 @@ import { StudentsTable } from "@/components/students/students-table"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,6 +18,10 @@ import {
   getCachedStudentsRouteData,
   type StudentStatus,
 } from "@/lib/data/students"
+import {
+  countTenantRecords,
+  countTenantRecordsByStatus,
+} from "@/lib/data/tenant-records"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
@@ -45,29 +45,24 @@ export default async function StudentsPage({
     status: statusParam(params.status),
     tag: stringParam(params.tag),
   }
+  const [activeStudents, totalStudents] = await Promise.all([
+    countTenantRecordsByStatus("students", admin.tenantId, "active"),
+    countTenantRecords("students", admin.tenantId),
+  ])
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        description="Create, search, edit, and archive tenant-isolated student records."
-        title="Students"
-      />
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-1">
-            <CardTitle>Student list</CardTitle>
-            <CardDescription>
-              Showing records for {admin.tenantName}. Search checks name and
-              phone.
-            </CardDescription>
-          </div>
-          <CardAction>
-            <Suspense fallback={<Button disabled>New student</Button>}>
-              <StudentCreateAction tenantId={admin.tenantId} />
-            </Suspense>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+    <div className="space-y-5 p-4 md:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <PageHeader
+          description={`${displayCount(activeStudents)} active · ${displayCount(totalStudents)} total`}
+          title="Students"
+        />
+        <Suspense fallback={<Button disabled size="sm">New Student</Button>}>
+          <StudentCreateAction tenantId={admin.tenantId} />
+        </Suspense>
+      </div>
+      <Card className="gap-0 py-0">
+        <CardContent className="p-0">
           <Suspense fallback={<StudentsContentSkeleton />}>
             <StudentsContent
               filters={filters}
@@ -89,7 +84,13 @@ async function StudentCreateAction({ tenantId }: { tenantId: string }) {
     { page: 1, pageSize: studentsPerPage }
   )
 
-  return <StudentCreateSheet action={createStudent} batches={batches} />
+  return (
+    <StudentCreateSheet
+      action={createStudent}
+      batches={batches}
+      triggerLabel="New Student"
+    />
+  )
 }
 
 async function StudentsContent({
@@ -115,13 +116,15 @@ async function StudentsContent({
 
   return (
     <>
-      <StudentListFilters
-        classLevels={classLevels}
-        filters={filters}
-        groups={groups}
-        mediums={mediums}
-        tags={tags}
-      />
+      <div className="border-b px-4 py-3">
+        <StudentListFilters
+          classLevels={classLevels}
+          filters={filters}
+          groups={groups}
+          mediums={mediums}
+          tags={tags}
+        />
+      </div>
       <Suspense fallback={<StudentsResultsSkeleton />} key={studentsContentKey(params)}>
         <StudentsResults
           filters={filters}
@@ -199,12 +202,12 @@ async function StudentsResults({
 
 function StudentsContentSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Skeleton className="h-10 flex-1 rounded-full" />
+    <div className="flex flex-col">
+      <div className="flex flex-col gap-2 border-b px-4 py-3 lg:flex-row lg:items-center">
+        <Skeleton className="h-8 flex-1 rounded-md" />
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton className="h-10 w-28 rounded-xl" key={index} />
+            <Skeleton className="h-8 w-28 rounded-md" key={index} />
           ))}
         </div>
       </div>
@@ -215,10 +218,10 @@ function StudentsContentSkeleton() {
 
 function StudentsResultsSkeleton() {
   return (
-    <div className="rounded-lg border">
+    <div>
       {Array.from({ length: 8 }).map((_, index) => (
         <div
-          className="grid grid-cols-[3rem_1.5fr_repeat(5,1fr)] gap-4 border-b p-3 last:border-b-0"
+          className="grid grid-cols-[1.5fr_repeat(5,1fr)_3rem] gap-4 border-b p-3 last:border-b-0"
           key={index}
         >
           {Array.from({ length: 7 }).map((__, cellIndex) => (
@@ -266,21 +269,24 @@ function StudentsPagination({
   const visiblePages = getVisiblePages(currentPage, totalPages)
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs text-muted-foreground">
         Showing {firstRecord}-{lastRecord} of {totalCount}
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1">
         {currentPage > 1 ? (
           <Button
             render={<Link href={pageHref(params, currentPage - 1)} />}
+            size="icon-sm"
             variant="outline"
           >
-            Previous
+            <span className="sr-only">Previous</span>
+            <span aria-hidden>‹</span>
           </Button>
         ) : (
-          <Button disabled variant="outline">
-            Previous
+          <Button disabled size="icon-sm" variant="outline">
+            <span className="sr-only">Previous</span>
+            <span aria-hidden>‹</span>
           </Button>
         )}
         {visiblePages.map((pageNumber, index) =>
@@ -294,8 +300,10 @@ function StudentsPagination({
           ) : (
             <Button
               aria-current={pageNumber === currentPage ? "page" : undefined}
+              className="size-7 text-xs"
               key={pageNumber}
               render={<Link href={pageHref(params, pageNumber)} />}
+              size="icon-sm"
               variant={pageNumber === currentPage ? "default" : "outline"}
             >
               {pageNumber}
@@ -305,13 +313,16 @@ function StudentsPagination({
         {currentPage < totalPages ? (
           <Button
             render={<Link href={pageHref(params, currentPage + 1)} />}
+            size="icon-sm"
             variant="outline"
           >
-            Next
+            <span className="sr-only">Next</span>
+            <span aria-hidden>›</span>
           </Button>
         ) : (
-          <Button disabled variant="outline">
-            Next
+          <Button disabled size="icon-sm" variant="outline">
+            <span className="sr-only">Next</span>
+            <span aria-hidden>›</span>
           </Button>
         )}
       </div>
@@ -384,4 +395,8 @@ function getVisiblePages(currentPage: number, totalPages: number) {
   pages.push(totalPages)
 
   return pages
+}
+
+function displayCount(value: number | null) {
+  return (value ?? 0).toLocaleString("en-BD")
 }

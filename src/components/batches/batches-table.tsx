@@ -1,11 +1,19 @@
-import { EyeIcon, PencilIcon } from "lucide-react"
+import { MoreHorizontalIcon } from "lucide-react"
 import Link from "next/link"
 
 import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
+import { BatchEditSheet } from "@/components/batches/batch-sheet"
 import { archiveBatch } from "@/lib/actions/batches"
 import type { BatchRecord } from "@/lib/data/batches"
 import { StatusBadge } from "@/components/app/status-badge"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -18,73 +26,99 @@ import {
 type BatchesTableProps = {
   batches: BatchRecord[]
   currentPath?: string
+  studentCountsByBatchId?: Record<string, number>
 }
 
 export function BatchesTable({
   batches,
   currentPath = "/batches",
+  studentCountsByBatchId = {},
 }: BatchesTableProps) {
   return (
     <Table>
       <TableHeader>
-        <TableRow>
-          <TableHead className="w-12 text-center">#</TableHead>
-          <TableHead>Batch</TableHead>
-          <TableHead>Class</TableHead>
-          <TableHead>Medium</TableHead>
-          <TableHead>Group</TableHead>
-          <TableHead>Monthly fee</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="h-9 pl-4 text-xs font-medium">Batch Name</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Subject</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Class</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Medium</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Group</TableHead>
+          <TableHead className="h-9 text-right text-xs font-medium">Monthly Fee</TableHead>
+          <TableHead className="h-9 text-right text-xs font-medium">Students</TableHead>
+          <TableHead className="h-9 text-xs font-medium">Status</TableHead>
+          <TableHead className="h-9 w-10" />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {batches.map((batch, index) => (
-          <TableRow key={batch.id}>
-            <TableCell className="text-center text-muted-foreground">
-              {index + 1}
-            </TableCell>
-            <TableCell className="font-medium">
-              <Link className="hover:underline" href={`/batches/${batch.id}`}>
+        {batches.map((batch) => (
+          <TableRow className="cursor-pointer" key={batch.id}>
+            <TableCell className="py-3 pl-4 text-sm font-medium">
+              <Link className="cursor-pointer hover:underline" href={`/batches/${batch.id}`}>
                 {batch.name}
               </Link>
             </TableCell>
-            <TableCell>{batch.class_level || "-"}</TableCell>
-            <TableCell>{batch.medium || "-"}</TableCell>
-            <TableCell>{batch.group_name || "-"}</TableCell>
-            <TableCell>{formatTaka(batch.monthly_fee)}</TableCell>
-            <TableCell>
+            <TableCell className="max-w-[160px] truncate py-3 text-sm text-muted-foreground">
+              {batch.subject || "-"}
+            </TableCell>
+            <TableCell className="py-3 text-sm">{batch.class_level || "-"}</TableCell>
+            <TableCell className="py-3 text-sm">{batch.medium || "-"}</TableCell>
+            <TableCell className="py-3 text-sm">{batch.group_name || "-"}</TableCell>
+            <TableCell className="py-3 text-right text-sm font-medium">
+              {formatTaka(batch.monthly_fee)}
+            </TableCell>
+            <TableCell className="py-3 text-right text-sm">
+              {(studentCountsByBatchId[batch.id] ?? 0).toLocaleString("en-BD")}
+            </TableCell>
+            <TableCell className="py-3">
               <StatusBadge status={batch.status} />
             </TableCell>
-            <TableCell>
-              <div className="flex justify-end gap-1">
-                <Button
-                  render={<Link href={`/batches/${batch.id}`} />}
-                  size="icon-sm"
-                  variant="ghost"
+            <TableCell className="py-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      className="size-7 cursor-pointer"
+                      size="icon-sm"
+                      type="button"
+                      variant="ghost"
+                    />
+                  }
                 >
-                  <EyeIcon />
-                  <span className="sr-only">View batch</span>
-                </Button>
-                <Button
-                  render={<Link href={`/batches/${batch.id}/edit`} />}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <PencilIcon />
-                  <span className="sr-only">Edit batch</span>
-                </Button>
-                {batch.status === "active" ? (
-                  <ArchiveConfirmDialog
-                    action={archiveBatch.bind(null, batch.id)}
-                    description={`This will archive ${batch.name} and remove it from active batch lists.`}
-                    itemName="batch"
-                    returnPath={currentPath}
-                    title="Archive batch?"
-                    triggerSize="icon-sm"
-                  />
-                ) : null}
-              </div>
+                  <MoreHorizontalIcon className="size-4" />
+                  <span className="sr-only">Batch actions</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem render={<Link href={`/batches/${batch.id}`} />}>
+                    View batch
+                  </DropdownMenuItem>
+                  <BatchEditSheet
+                    batch={batch}
+                    trigger={<DropdownMenuItem render={<button type="button" />} />}
+                  >
+                    Edit batch
+                  </BatchEditSheet>
+                  {batch.status === "active" ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <ArchiveConfirmDialog
+                        action={archiveBatch.bind(null, batch.id)}
+                        description={`This will archive ${batch.name} and remove it from active batch lists.`}
+                        itemName="batch"
+                        returnPath={currentPath}
+                        title="Archive batch?"
+                        trigger={
+                          <DropdownMenuItem
+                            render={<button type="button" />}
+                            variant="destructive"
+                          >
+                            Archive
+                          </DropdownMenuItem>
+                        }
+                      />
+                    </>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </TableCell>
           </TableRow>
         ))}

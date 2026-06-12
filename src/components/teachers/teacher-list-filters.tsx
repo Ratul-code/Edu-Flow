@@ -66,39 +66,39 @@ export function TeacherListFilters({ filters }: TeacherListFiltersProps) {
 
   return (
     <form
-      className="flex flex-col gap-3 lg:flex-row lg:items-center"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => event.preventDefault()}
       role="search"
     >
-      <div className="relative min-w-0 flex-1">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative min-w-[200px] max-w-xs flex-1">
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-busy={isPending}
-          className="h-10 rounded-full pl-10 text-sm"
+          className="h-8 pl-8 text-sm"
           name="q"
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by name or phone"
+          placeholder="Search teachers..."
           value={search}
         />
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           name="status"
           onValueChange={(value) => replaceParam("status", value ?? "")}
           value={filters.status ?? "all"}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
-            <SelectValue placeholder="All statuses" />
+          <SelectTrigger className="h-8 w-[120px]" size="sm">
+            <SelectValue placeholder="Paid status" />
           </SelectTrigger>
           <SelectContent align="start">
             <SelectGroup>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">All status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="archived">Archived</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>
-        <Button render={<Link href="/teachers" />} variant="outline">
+        <Button className="ml-auto gap-1.5" render={<Link href="/teachers" />} size="sm" variant="outline">
           <XIcon data-icon="inline-start" />
           Clear
         </Button>

@@ -29,6 +29,7 @@ type StudentFieldsProps = {
   defaultFeeStartMonth?: string
   errors?: Record<string, string | string[]>
   groupOptions?: AcademicGroupRecord[]
+  showBatchAssignments?: boolean
   showFeeStartControls?: boolean
   student?: StudentRecord
   tableExists: boolean
@@ -41,6 +42,7 @@ export function StudentFields({
   defaultFeeStartMonth,
   errors,
   groupOptions = [],
+  showBatchAssignments = true,
   showFeeStartControls = false,
   student,
   tableExists,
@@ -217,9 +219,10 @@ export function StudentFields({
         />
         <FieldError>{fieldError(errors?.tags)}</FieldError>
       </Field>
-      {batches.length ? (
+      {showBatchAssignments && batches.length ? (
         <Field className="sm:col-span-2">
           <FieldLabel>Assign batches</FieldLabel>
+          <input name="batch_assignment_present" type="hidden" value="1" />
           <div className="grid gap-2 rounded-lg border bg-muted/20 p-3 sm:grid-cols-2">
             {batches.map((batch) => (
               <label className="flex items-start gap-2 text-sm" key={batch.id}>

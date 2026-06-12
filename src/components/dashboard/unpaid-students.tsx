@@ -5,8 +5,8 @@ import { useMemo, useState } from "react"
 import { SearchIcon } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/app/status-badge"
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import type { DueStudentLedger } from "@/lib/data/dashboard"
 
 type UnpaidStudentsProps = {
@@ -34,13 +42,9 @@ export function UnpaidStudents({ students }: UnpaidStudentsProps) {
   const previewStudents = students.slice(0, 5)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {previewStudents.length ? (
-        <div className="flex flex-col gap-3">
-          {previewStudents.map((student) => (
-            <UnpaidStudentRow key={student.id} student={student} />
-          ))}
-        </div>
+        <DueStudentsTable students={previewStudents} />
       ) : (
         <p className="text-sm text-muted-foreground">
           Due students will appear after monthly fee ledgers are prepared.
@@ -139,13 +143,9 @@ function UnpaidStudentsModal({ students }: UnpaidStudentsProps) {
         </Select>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto rounded-lg border p-3">
+      <div className="max-h-[420px] overflow-y-auto rounded-lg border">
         {filteredStudents.length ? (
-          <div className="flex flex-col gap-3">
-            {filteredStudents.map((student) => (
-              <UnpaidStudentRow key={student.id} student={student} />
-            ))}
-          </div>
+          <DueStudentsTable students={filteredStudents} />
         ) : (
           <p className="p-3 text-sm text-muted-foreground">
             No due students match these filters.
@@ -156,38 +156,68 @@ function UnpaidStudentsModal({ students }: UnpaidStudentsProps) {
   )
 }
 
-function UnpaidStudentRow({ student }: { student: DueStudentLedger }) {
+function DueStudentsTable({ students }: UnpaidStudentsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Avatar className="bg-destructive/10 text-destructive" size="lg">
-        <AvatarFallback className="bg-destructive/10 text-sm font-medium text-destructive">
-          {initials(student.studentName)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{student.studentName}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {student.studentPhone || "No phone"}
-        </p>
-      </div>
-      <div className="ml-auto flex shrink-0 items-center gap-3 max-sm:basis-full max-sm:justify-end">
-        <p className="text-sm font-semibold">{formatTaka(student.dueAmount)}</p>
-        <Badge variant="destructive">{student.status}</Badge>
-        {student.studentId ? (
-          <Button
-            render={<Link href={`/students/${student.studentId}`} />}
-            size="sm"
-            variant="outline"
-          >
-            View details
-          </Button>
-        ) : (
-          <Button disabled size="sm" variant="outline">
-            View details
-          </Button>
-        )}
-      </div>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="h-8 text-xs font-medium">Student</TableHead>
+          <TableHead className="h-8 text-xs font-medium">Class</TableHead>
+          <TableHead className="h-8 text-right text-xs font-medium">
+            Due
+          </TableHead>
+          <TableHead className="h-8 text-xs font-medium">Status</TableHead>
+          <TableHead className="h-8 w-10" />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {students.map((student) => (
+          <TableRow key={student.id}>
+            <TableCell className="py-2.5">
+              <div className="flex items-center gap-2">
+                <Avatar className="size-6">
+                  <AvatarFallback className="bg-muted text-[10px] font-semibold">
+                    {initials(student.studentName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="text-sm font-medium leading-none">
+                    {student.studentName}
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {student.studentPhone || "No phone"}
+                  </div>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell className="py-2.5 text-xs text-muted-foreground">
+              {student.classLevel || "-"}
+            </TableCell>
+            <TableCell className="py-2.5 text-right text-sm font-medium">
+              {formatTaka(student.dueAmount)}
+            </TableCell>
+            <TableCell className="py-2.5">
+              <StatusBadge status={student.status} />
+            </TableCell>
+            <TableCell className="py-2.5">
+              {student.studentId ? (
+                <Button
+                  render={<Link href={`/students/${student.studentId}`} />}
+                  size="sm"
+                  variant="ghost"
+                >
+                  View
+                </Button>
+              ) : (
+                <Button disabled size="sm" variant="ghost">
+                  View
+                </Button>
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 

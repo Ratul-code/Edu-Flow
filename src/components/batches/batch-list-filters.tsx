@@ -77,28 +77,28 @@ export function BatchListFilters({
 
   return (
     <form
-      className="flex flex-col gap-3 lg:flex-row lg:items-center"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => event.preventDefault()}
       role="search"
     >
-      <div className="relative min-w-0 flex-1">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative min-w-[200px] max-w-xs flex-1">
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-busy={isPending}
-          className="h-10 rounded-full pl-10 text-sm"
+          className="h-8 pl-8 text-sm"
           name="q"
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search by batch name"
           value={search}
         />
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           name="classLevel"
           onValueChange={(value) => replaceParam("classLevel", value ?? "")}
           value={filters.classLevel ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-[130px]" size="sm">
             <SelectValue placeholder="All classes" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -117,7 +117,7 @@ export function BatchListFilters({
           onValueChange={(value) => replaceParam("medium", value ?? "")}
           value={filters.medium ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-40">
+          <SelectTrigger className="h-8 w-[110px]" size="sm">
             <SelectValue placeholder="All mediums" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -136,7 +136,7 @@ export function BatchListFilters({
           onValueChange={(value) => replaceParam("groupName", value ?? "")}
           value={filters.groupName ?? ""}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-[110px]" size="sm">
             <SelectValue placeholder="All groups" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -155,7 +155,7 @@ export function BatchListFilters({
           onValueChange={(value) => replaceParam("status", value ?? "")}
           value={filters.status ?? "all"}
         >
-          <SelectTrigger className="h-10 w-full sm:w-36">
+          <SelectTrigger className="h-8 w-[100px]" size="sm">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent align="start">
@@ -166,7 +166,7 @@ export function BatchListFilters({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <Button render={<Link href="/batches" />} variant="outline">
+        <Button className="ml-auto gap-1.5" render={<Link href="/batches" />} size="sm" variant="outline">
           <XIcon data-icon="inline-start" />
           Clear
         </Button>

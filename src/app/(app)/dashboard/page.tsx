@@ -1,18 +1,24 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertCircleIcon,
+  ArrowRightIcon,
   CalendarDaysIcon,
   GraduationCapIcon,
-  ReceiptTextIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
   UsersRoundIcon,
   WalletCardsIcon,
 } from "lucide-react";
+import Link from "next/link";
 
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { UnpaidStudents } from "@/components/dashboard/unpaid-students";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,6 +31,14 @@ import {
   type DashboardSchedule,
 } from "@/lib/data/dashboard";
 import { monthStart } from "@/lib/data/fees";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   countTenantRecordsByStatus,
   countTenantRecordsCreatedSince,
@@ -59,97 +73,144 @@ export default async function DashboardPage() {
     studentFees.paid,
     previousStudentFees.paid
   );
+  const collectionTotal = Number(studentFees.paid) + Number(studentFees.due);
+  const collectionPercent =
+    collectionTotal > 0 ? Math.round((Number(studentFees.paid) / collectionTotal) * 100) : 0;
   const topMetrics = [
     {
-      footerLeft: "Active Students",
-      footerRight: `+${displayCount(newStudentsThisMonth)} this month`,
       icon: UsersRoundIcon,
-      label: "Active Students",
-      labelTone: "text-[#3157d8]",
-      tone: "bg-[#eef3ff] text-[#3157d8]",
+      tone: "bg-info/10 text-info",
+      title: "Active Students",
+      trend: "up",
+      change: `+${displayCount(newStudentsThisMonth)} this month`,
       value: displayCount(activeStudents),
-      bgClass: "bg-[#eef3ff52]",
     },
     {
-      footerLeft: "Active Batches",
-      footerRight: `+${displayCount(newBatchesThisMonth)} this month`,
       icon: GraduationCapIcon,
-      label: "Active Batches",
-      labelTone: "text-[#16805a]",
-      tone: "bg-[#edf9f2] text-[#12935f]",
+      tone: "bg-success/10 text-success",
+      title: "Active Batches",
+      trend: "up",
+      change: `+${displayCount(newBatchesThisMonth)} this month`,
       value: displayCount(activeBatches),
-      bgClass: "bg-[#edf9f252]",
     },
     {
-      footerLeft: "Compared to last month",
-      footerRight: formatTrend(collectionChange),
       icon: WalletCardsIcon,
-      label: "Fee Collected",
-      labelTone: "text-[#d6991c]",
-      tone: "bg-[#ffe7b8] text-[#d6991c]",
+      tone: "bg-success/10 text-success",
+      title: "Fee Collected",
+      trend: collectionChange >= 0 ? "up" : "down",
+      change: formatTrend(collectionChange),
       value: formatTaka(studentFees.paid),
-      bgClass: "bg-[#fffbeb72]",
     },
     {
-      footerLeft: `Total ${displayCount(dueLedgers.length)} students`,
-      footerRight: "",
-      icon: ReceiptTextIcon,
-      label: "Due Fee",
-      labelTone: "text-[#d94b4b]",
-      tone: "bg-[#fee2e2] text-[#d94b4b]",
+      icon: AlertCircleIcon,
+      tone: "bg-destructive/10 text-destructive",
+      title: "Due Fee",
+      trend: "down",
+      change: `${displayCount(dueLedgers.length)} students`,
       value: formatTaka(studentFees.due),
-      bgClass: "bg-[#fff5f572]",
     },
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-full flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold tracking-normal">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Welcome back. Here&apos;s what&apos;s happening at your coaching
             center.
           </p>
         </div>
-        <Badge className="h-9 rounded-lg px-3" variant="outline">
+        <Badge className="gap-1.5 text-xs font-medium" variant="outline">
           <CalendarDaysIcon data-icon="inline-start" />
           {formatMonth(currentMonth)}
         </Badge>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {topMetrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
+          <MetricCard key={metric.title} {...metric} />
         ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
-        <Card className="min-h-80">
-          <CardHeader>
-            <CardTitle>Due Students</CardTitle>
+      <Card className="gap-4 py-5">
+        <CardHeader className="px-5 pt-0 pb-0">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-sm font-semibold">
+                Fee Collection Progress
+              </CardTitle>
+              <CardDescription className="mt-0.5 text-xs">
+                {formatMonth(currentMonth)} - {formatTaka(studentFees.paid)} of{" "}
+                {formatTaka(collectionTotal)} collected
+              </CardDescription>
+            </div>
+            <span className="text-sm font-semibold text-success">
+              {collectionPercent}%
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="px-5 pt-0">
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${collectionPercent}%` }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>{formatTaka(studentFees.paid)} collected</span>
+            <span>{formatTaka(studentFees.due)} remaining</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="gap-3 py-5 lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between px-5 pt-0 pb-0">
+            <div>
+              <CardTitle className="text-sm font-semibold">
+                Students With Due Fees
+              </CardTitle>
+              <CardDescription className="mt-0.5 text-xs">
+                Requires immediate attention
+              </CardDescription>
+            </div>
+            <Button
+              className="gap-1 text-xs"
+              render={<Link href="/fees" />}
+              size="sm"
+              variant="ghost"
+            >
+              View all <ArrowRightIcon className="size-3" />
+            </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 pt-2">
             <UnpaidStudents students={dueLedgers} />
           </CardContent>
         </Card>
 
-        <Card className="min-h-80">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card className="gap-3 py-5">
+          <CardHeader className="px-5 pt-0 pb-0">
+            <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+            <CardDescription className="text-xs">
+              Common administrative tasks
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid grid-cols-2 gap-2 px-5 pt-2">
             <QuickActions batches={quickBatches} dueLedgers={dueLedgers} />
           </CardContent>
         </Card>
       </section>
 
       <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Classes</CardTitle>
+        <Card className="gap-3 py-5">
+          <CardHeader className="px-5 pt-0 pb-0">
+            <CardTitle className="text-sm font-semibold">Upcoming Classes</CardTitle>
+            <CardDescription className="text-xs">
+              Scheduled classes from active batches
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 pt-2">
             <UpcomingClassesTable schedules={upcomingSchedules} />
           </CardContent>
         </Card>
@@ -159,52 +220,41 @@ export default async function DashboardPage() {
 }
 
 function MetricCard({
-  footerLeft,
-  footerRight,
   icon: Icon,
-  label,
-  labelTone,
+  change,
   tone,
+  title,
+  trend,
   value,
-  bgClass = "bg-white",
 }: {
-  footerLeft: string;
-  footerRight: string;
+  change: string;
   icon: LucideIcon;
-  label: string;
-  labelTone: string;
   tone: string;
+  title: string;
+  trend: string;
   value: string;
-  bgClass?: string;
 }) {
+  const TrendIcon = trend === "up" ? TrendingUpIcon : TrendingDownIcon;
+
   return (
-    <Card
-      className={`min-h-[154px] rounded-xl border-stale-200 ${bgClass}`}
-      size="sm"
-    >
-      <CardContent className="relative flex gap-5 min-h-[132px] flex-col justify-between px-5 py-4">
-        <span
-          className={`absolute top-1/2 right-6 flex size-16 -translate-y-1/2 items-center justify-center rounded-full ${tone}`}
-        >
-          <Icon strokeWidth={2.15} />
-        </span>
-        <div className="flex min-w-0 max-w-[calc(100%-4.5rem)] flex-col gap-6">
-          <p className={`truncate text-[15px] font-semibold ${labelTone}`}>
-            {label}
-          </p>
-          <p className="truncate text-[32px] leading-none font-bold tracking-normal text-[#101828]">
-            {value}
-          </p>
+    <Card className="gap-3 py-5">
+      <CardHeader className="px-5 pt-0 pb-0">
+        <div className="flex items-center justify-between">
+          <CardDescription className="text-xs font-medium tracking-wide uppercase">
+            {title}
+          </CardDescription>
+          <div className={`flex size-8 items-center justify-center rounded-lg ${tone}`}>
+            <Icon className="size-4" />
+          </div>
         </div>
-        <div className="flex items-end justify-between gap-3">
-          <p className="truncate text-[15px] font-medium text-[#6d7480]">
-            {footerLeft}
-          </p>
-          {footerRight ? (
-            <p className="shrink-0 text-[14px] text-primary">
-              {footerRight}
-            </p>
-          ) : null}
+      </CardHeader>
+      <CardContent className="px-5 pt-0">
+        <div className="text-2xl font-bold tracking-tight">{value}</div>
+        <div className="mt-1 flex items-center gap-1">
+          <TrendIcon
+            className={`size-3 ${trend === "up" ? "text-success" : "text-destructive"}`}
+          />
+          <span className="text-xs text-muted-foreground">{change}</span>
         </div>
       </CardContent>
     </Card>
@@ -222,30 +272,30 @@ function UpcomingClassesTable({ schedules }: { schedules: DashboardSchedule[]; }
 
   return (
     <div className="overflow-hidden rounded-lg border">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2 font-medium">Time</th>
-            <th className="px-3 py-2 font-medium">Batch</th>
-            <th className="px-3 py-2 font-medium">Subject</th>
-            <th className="px-3 py-2 font-medium">Teacher</th>
-            <th className="px-3 py-2 font-medium">Room</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="h-9 text-xs font-medium">Time</TableHead>
+            <TableHead className="h-9 text-xs font-medium">Batch</TableHead>
+            <TableHead className="h-9 text-xs font-medium">Subject</TableHead>
+            <TableHead className="h-9 text-xs font-medium">Teacher</TableHead>
+            <TableHead className="h-9 text-xs font-medium">Room</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {schedules.map((schedule) => (
-            <tr className="border-t" key={schedule.id}>
-              <td className="px-3 py-3">
+            <TableRow key={schedule.id}>
+              <TableCell className="py-3">
                 {weekday(schedule.weekday)} {formatTime(schedule.start_time)}
-              </td>
-              <td className="px-3 py-3">{schedule.batch?.name ?? "-"}</td>
-              <td className="px-3 py-3">{schedule.subject ?? "-"}</td>
-              <td className="px-3 py-3">{schedule.teacher?.name ?? "-"}</td>
-              <td className="px-3 py-3">{schedule.room_name || "-"}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="py-3">{schedule.batch?.name ?? "-"}</TableCell>
+              <TableCell className="py-3">{schedule.subject ?? "-"}</TableCell>
+              <TableCell className="py-3">{schedule.teacher?.name ?? "-"}</TableCell>
+              <TableCell className="py-3">{schedule.room_name || "-"}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

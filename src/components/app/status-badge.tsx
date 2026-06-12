@@ -28,7 +28,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   if (normalized === "active") {
     return (
       <Badge
-        className="border-emerald-200 bg-emerald-100 text-emerald-700"
+        className="border-success/20 bg-success/10 text-success"
         variant="outline"
       >
         {status}
@@ -39,7 +39,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   if (normalized === "archived") {
     return (
       <Badge
-        className="border-gray-200 bg-gray-100 text-gray-600"
+        className="border-muted bg-muted text-muted-foreground"
         variant="outline"
       >
         {status}
@@ -50,7 +50,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   if (normalized === "paid") {
     return (
       <Badge
-        className="border-emerald-200 bg-emerald-100 text-emerald-700"
+        className="border-success/20 bg-success/10 text-success"
         variant="outline"
       >
         {status}
@@ -61,7 +61,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   if (normalized === "partial") {
     return (
       <Badge
-        className="border-amber-200 bg-amber-100 text-amber-700"
+        className="border-info/20 bg-info/10 text-info"
         variant="outline"
       >
         {status}
@@ -69,10 +69,32 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     )
   }
 
-  if (normalized === "due" || normalized === "overdue") {
+  if (normalized === "due") {
     return (
       <Badge
-        className="border-red-200 bg-red-100 text-red-700"
+        className="border-warning/20 bg-warning/10 text-warning-foreground"
+        variant="outline"
+      >
+        {status}
+      </Badge>
+    )
+  }
+
+  if (normalized === "overdue") {
+    return (
+      <Badge
+        className="border-destructive/20 bg-destructive/10 text-destructive"
+        variant="outline"
+      >
+        {status}
+      </Badge>
+    )
+  }
+
+  if (normalized === "not started" || normalized === "waived") {
+    return (
+      <Badge
+        className="border-border bg-muted text-muted-foreground"
         variant="outline"
       >
         {status}

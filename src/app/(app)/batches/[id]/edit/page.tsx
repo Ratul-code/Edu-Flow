@@ -1,8 +1,5 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
-import { PageHeader } from "@/components/app/page-header"
-import { BatchForm } from "@/components/batches/batch-form"
-import { updateBatch } from "@/lib/actions/batches"
 import { requireAdminContext } from "@/lib/auth/user"
 import { getBatchById } from "@/lib/data/batches"
 
@@ -19,19 +16,5 @@ export default async function EditBatchPage({ params }: EditBatchPageProps) {
     notFound()
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        description="Update batch details, fee, classification, or active status."
-        title={`Edit ${batch.name}`}
-      />
-      <BatchForm
-        action={updateBatch.bind(null, batch.id)}
-        batch={batch}
-        cancelHref={`/batches/${batch.id}`}
-        submitLabel="Save changes"
-        title="Batch information"
-      />
-    </div>
-  )
+  redirect(`/batches/${batch.id}`)
 }

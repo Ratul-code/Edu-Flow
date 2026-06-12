@@ -6,101 +6,124 @@ type StudentPaymentReceiptProps = {
 
 export function StudentPaymentReceipt({ receipt }: StudentPaymentReceiptProps) {
   return (
-    <div className="mx-auto w-full max-w-[700px] rounded-md border bg-white p-8 text-slate-950 shadow-sm">
-      <div className="flex items-start justify-between gap-6 border-b pb-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Payment Receipt
+    <div className="mx-auto w-full max-w-[640px] bg-white text-slate-900">
+      <div className="border border-slate-200">
+        <div className="border-b-4 border-teal-700 px-8 py-5 text-center">
+          <h2 className="text-xl font-bold leading-tight">
+            {receipt.tenant.name}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {receipt.tenant.address || "-"}
+            {receipt.tenant.contactPhone ? ` · Phone: ${receipt.tenant.contactPhone}` : ""}
           </p>
-          <h2 className="mt-1 text-2xl font-semibold">{receipt.tenant.name}</h2>
-          {receipt.tenant.address ? (
-            <p className="mt-1 max-w-md text-sm text-slate-600">
-              {receipt.tenant.address}
-            </p>
-          ) : null}
-          {receipt.tenant.contactPhone ? (
-            <p className="mt-1 text-sm text-slate-600">
-              Phone: {receipt.tenant.contactPhone}
-            </p>
-          ) : null}
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-500">Receipt no</p>
-          <p className="text-lg font-semibold text-emerald-700">
-            {receipt.payment.receiptNo}
-          </p>
-          <p className="mt-2 text-xs text-slate-500">Payment date</p>
-          <p className="text-sm font-medium">
-            {formatDate(receipt.payment.paymentDate)}
+          <p className="mt-3 text-sm font-bold uppercase tracking-[0.18em] text-teal-700">
+            Money Receipt
           </p>
         </div>
-      </div>
 
-      <div className="grid gap-4 border-b py-5 sm:grid-cols-2">
-        <ReceiptField label="Student" value={receipt.student.name} />
-        <ReceiptField
-          label="Guardian phone"
-          value={receipt.student.guardianPhone ?? receipt.student.phone ?? "-"}
-        />
-        <ReceiptField
-          label="Billing month"
-          value={formatMonth(receipt.ledger.billingMonth)}
-        />
-        <ReceiptField
-          label="Batch"
-          value={receipt.batchNames.length ? receipt.batchNames.join(", ") : "-"}
-        />
-      </div>
+        <div className="grid grid-cols-2 border-b border-slate-200 px-8 py-4 text-sm">
+          <ReceiptLine label="Receipt No" value={receipt.payment.receiptNo} />
+          <ReceiptLine
+            align="right"
+            label="Date"
+            value={formatDate(receipt.payment.paymentDate)}
+          />
+        </div>
 
-      <div className="grid gap-3 py-5">
-        <AmountRow label="Payment method" value={formatMethod(receipt.payment.method)} />
-        <AmountRow
-          label="Total expected amount"
-          value={formatTaka(receipt.ledger.totalExpectedAmount)}
-        />
-        <AmountRow label="Paid amount" value={formatTaka(receipt.payment.amount)} />
-        <AmountRow
-          emphasize
-          label="Due after this payment"
-          value={formatTaka(receipt.ledger.dueAmountAfterPayment)}
-        />
-      </div>
+        <div className="grid gap-x-8 gap-y-3 border-b border-slate-200 px-8 py-5 text-sm sm:grid-cols-2">
+          <ReceiptLine label="Received From" value={receipt.student.name} />
+          <ReceiptLine
+            label="Guardian Phone"
+            value={receipt.student.guardianPhone ?? receipt.student.phone ?? "-"}
+          />
+          <ReceiptLine
+            label="Billing Month"
+            value={formatMonth(receipt.ledger.billingMonth)}
+          />
+          <ReceiptLine
+            label="Batch"
+            value={receipt.batchNames.length ? receipt.batchNames.join(", ") : "-"}
+          />
+        </div>
 
-      <p className="border-t pt-4 text-center text-xs text-slate-500">
-        This is a computer-generated receipt.
-      </p>
+        <div className="px-8 py-5">
+          <div className="overflow-hidden border border-slate-200 text-sm">
+            <AmountRow label="Payment Method" value={formatMethod(receipt.payment.method)} />
+            <AmountRow
+              label="Total Expected Amount"
+              value={formatTaka(receipt.ledger.totalExpectedAmount)}
+            />
+            <AmountRow
+              label="Paid Amount"
+              positive
+              value={formatTaka(receipt.payment.amount)}
+            />
+            <AmountRow
+              danger
+              label="Due After This Payment"
+              value={formatTaka(receipt.ledger.dueAmountAfterPayment)}
+            />
+          </div>
+
+          <p className="mt-4 text-center text-xs text-slate-500">
+            This is a computer-generated receipt.
+          </p>
+        </div>
+
+        <div className="bg-teal-700 px-8 py-3 text-center text-sm font-semibold text-white">
+          Thank you for being with us.
+        </div>
+      </div>
     </div>
   )
 }
 
-function ReceiptField({ label, value }: { label: string; value: string }) {
+function ReceiptLine({
+  align = "left",
+  label,
+  value,
+}: {
+  align?: "left" | "right"
+  label: string
+  value: string
+}) {
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className={align === "right" ? "text-right" : undefined}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+      <p className="mt-1 font-semibold text-slate-900">{value}</p>
     </div>
   )
 }
 
 function AmountRow({
-  emphasize = false,
+  danger = false,
   label,
+  positive = false,
   value,
 }: {
-  emphasize?: boolean
+  danger?: boolean
   label: string
+  positive?: boolean
   value: string
 }) {
   return (
     <div
-      className={`flex items-center justify-between rounded-md px-4 py-3 ${
-        emphasize ? "bg-emerald-50 text-emerald-800" : "bg-slate-50"
+      className={`flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-3 last:border-b-0 ${
+        danger ? "bg-red-50" : "bg-white"
       }`}
     >
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-sm font-semibold">{value}</span>
+      <span className={`font-medium ${danger ? "text-slate-900" : "text-slate-600"}`}>
+        {label}
+      </span>
+      <span
+        className={`font-bold ${
+          positive ? "text-teal-700" : danger ? "text-red-700" : "text-slate-900"
+        }`}
+      >
+        {value}
+      </span>
     </div>
   )
 }
@@ -125,5 +148,5 @@ function formatMethod(value: string) {
 }
 
 function formatTaka(value: number | string) {
-  return `৳${Number(value).toLocaleString("en-BD")}`
+  return `BDT ${Number(value).toLocaleString("en-BD")}`
 }

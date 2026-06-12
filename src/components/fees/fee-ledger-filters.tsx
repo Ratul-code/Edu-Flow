@@ -12,7 +12,6 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { BatchRecord } from "@/lib/data/batches";
 
@@ -27,8 +26,8 @@ type FeeLedgerFiltersProps = {
 };
 
 const statuses = [
-  { label: "Overdue + due", value: "attention" },
   { label: "All statuses", value: "all" },
+  { label: "Overdue + due", value: "overdue_due" },
   { label: "Overdue", value: "overdue" },
   { label: "Due", value: "due" },
   { label: "Partial", value: "partial" },
@@ -47,6 +46,11 @@ export function FeeLedgerFilters({
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState(filters.search ?? "");
   const hasMounted = useRef(false);
+  const selectedStatusLabel =
+    statuses.find((status) => status.value === filters.status)?.label ??
+    "All statuses";
+  const selectedBatchName =
+    batches.find((batch) => batch.id === filters.batchId)?.name ?? "All batches";
 
   const replaceParam = useCallback(
     function replaceParam(key: string, value: string) {
@@ -94,30 +98,30 @@ export function FeeLedgerFilters({
 
   return (
     <form
-      className="flex flex-col gap-3 rounded-lg bg-muted/20 p-3 xl:flex-row xl:items-center"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => event.preventDefault()}
       role="search"
     >
       <input name="month" type="hidden" value={month} />
-      <div className="relative min-w-0 flex-1">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative min-w-[200px] max-w-xs flex-1">
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-busy={isPending}
-          className="h-10 rounded-full pl-10 text-sm"
+          className="h-8 pl-8 text-sm"
           name="q"
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search student, phone, or class"
           value={search}
         />
       </div>
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,11rem)_minmax(0,14rem)_auto] items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           name="status"
           onValueChange={(value) => replaceParam("status", value ?? "")}
-          value={filters.status ?? "attention"}
+          value={filters.status ?? "all"}
         >
-          <SelectTrigger className="h-10 w-full">
-            <SelectValue placeholder="Overdue + due" />
+          <SelectTrigger className="h-8 w-[136px]" size="sm">
+            <span className="block truncate">{selectedStatusLabel}</span>
           </SelectTrigger>
           <SelectContent align="start">
             <SelectGroup>
@@ -134,8 +138,8 @@ export function FeeLedgerFilters({
           onValueChange={(value) => replaceParam("batch", value ?? "")}
           value={filters.batchId ?? ""}
         >
-          <SelectTrigger className="h-10 w-full">
-            <SelectValue placeholder="All batches" />
+          <SelectTrigger className="h-8 w-[150px]" size="sm">
+            <span className="block truncate">{selectedBatchName}</span>
           </SelectTrigger>
           <SelectContent align="start">
             <SelectGroup>
@@ -149,8 +153,9 @@ export function FeeLedgerFilters({
           </SelectContent>
         </Select>
         <Button
-          className="w-full px-4 text-sm sm:w-auto"
+          className="ml-auto gap-1.5"
           onClick={clearFilters}
+          size="sm"
           type="button"
           variant="outline"
         >

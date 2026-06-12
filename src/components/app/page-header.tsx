@@ -1,3 +1,5 @@
+import { AlertCircleIcon } from "lucide-react"
+
 import { Badge } from "@/components/ui/badge"
 
 type PageHeaderProps = {
@@ -8,27 +10,31 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, description, badge }: PageHeaderProps) {
   const isActive = badge?.toLowerCase() === "active"
+  const isOverdue = badge?.toLowerCase().includes("overdue")
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-normal">{title}</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          {description}
-        </p>
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        {badge ? (
+          <Badge
+            className={
+              isOverdue
+                ? "gap-1 border-destructive/20 bg-destructive/10 text-destructive"
+                : isActive
+                  ? "border-success/20 bg-success/10 text-success"
+                  : ""
+            }
+            variant="outline"
+          >
+            {isOverdue ? <AlertCircleIcon className="size-3" /> : null}
+            {badge}
+          </Badge>
+        ) : null}
       </div>
-      {badge ? (
-        <Badge
-          className={
-            isActive
-              ? "mt-1 border-emerald-200 bg-emerald-100 text-emerald-700"
-              : "mt-1"
-          }
-          variant="outline"
-        >
-          {badge}
-        </Badge>
-      ) : null}
+      <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">
+        {description}
+      </p>
     </div>
   )
 }

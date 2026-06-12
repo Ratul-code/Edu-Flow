@@ -6,11 +6,7 @@ import { TeacherListFilters } from "@/components/teachers/teacher-list-filters"
 import { TeachersTable } from "@/components/teachers/teachers-table"
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +17,11 @@ import {
   getCachedTeachersRouteData,
   type TeacherStatus,
 } from "@/lib/data/teachers"
+import {
+  countTenantRecords,
+  countTenantRecordsByStatus,
+} from "@/lib/data/tenant-records"
+import { createClient } from "@/lib/supabase/server"
 
 type TeachersPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -35,27 +36,22 @@ export default async function TeachersPage({
     search: stringParam(params.q),
     status: statusParam(params.status),
   }
+  const [activeTeachers, totalTeachers] = await Promise.all([
+    countTenantRecordsByStatus("teachers", admin.tenantId, "active"),
+    countTenantRecords("teachers", admin.tenantId),
+  ])
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        description="Create, search, edit, and archive tenant-isolated teacher records."
-        title="Teachers"
-      />
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-1">
-            <CardTitle>Teacher list</CardTitle>
-            <CardDescription>
-              Showing records for {admin.tenantName}. Default salaries are saved
-              for the salary ledger.
-            </CardDescription>
-          </div>
-          <CardAction>
-            <TeacherCreateSheet action={createTeacher} />
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+    <div className="space-y-5 p-4 md:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <PageHeader
+          description={`${displayCount(activeTeachers)} active · ${displayCount(totalTeachers)} total`}
+          title="Teachers"
+        />
+        <TeacherCreateSheet action={createTeacher} />
+      </div>
+      <Card className="gap-0 py-0">
+        <CardContent className="p-0">
           <Suspense fallback={<TeachersContentSkeleton />}>
             <TeachersContent
               filters={filters}
@@ -85,7 +81,9 @@ async function TeachersContent({
 
   return (
     <>
-      <TeacherListFilters filters={filters} />
+      <div className="border-b px-4 py-3">
+        <TeacherListFilters filters={filters} />
+      </div>
       <Suspense fallback={<TeachersResultsSkeleton />} key={teachersContentKey(params)}>
         <TeachersResults filters={filters} params={params} tenantId={tenantId} />
       </Suspense>
@@ -106,11 +104,16 @@ async function TeachersResults({
   tenantId: string
 }) {
   const { teachers } = await getCachedTeachersRouteData(tenantId, filters)
+  const batchCountsByTeacherId = await countActiveBatchesByTeacherId(tenantId)
 
   return (
     <>
       {teachers.length ? (
-        <TeachersTable currentPath={pageHref(params)} teachers={teachers} />
+        <TeachersTable
+          batchCountsByTeacherId={batchCountsByTeacherId}
+          currentPath={pageHref(params)}
+          teachers={teachers}
+        />
       ) : (
         <Empty>
           <EmptyHeader>
@@ -128,12 +131,12 @@ async function TeachersResults({
 
 function TeachersContentSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Skeleton className="h-10 flex-1 rounded-full" />
+    <div className="flex flex-col">
+      <div className="flex flex-col gap-2 border-b px-4 py-3 lg:flex-row lg:items-center">
+        <Skeleton className="h-8 flex-1 rounded-md" />
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton className="h-10 w-28 rounded-lg" key={index} />
+            <Skeleton className="h-8 w-28 rounded-md" key={index} />
           ))}
         </div>
       </div>
@@ -144,10 +147,10 @@ function TeachersContentSkeleton() {
 
 function TeachersResultsSkeleton() {
   return (
-    <div className="rounded-lg border">
+    <div>
       {Array.from({ length: 7 }).map((_, index) => (
         <div
-          className="grid grid-cols-[3rem_1.5fr_repeat(4,1fr)] gap-4 border-b p-3 last:border-b-0"
+          className="grid grid-cols-[1.5fr_repeat(5,1fr)_3rem] gap-4 border-b p-3 last:border-b-0"
           key={index}
         >
           {Array.from({ length: 6 }).map((__, cellIndex) => (
@@ -157,6 +160,31 @@ function TeachersResultsSkeleton() {
       ))}
     </div>
   )
+}
+
+async function countActiveBatchesByTeacherId(tenantId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("batches")
+    .select("teacher_id")
+    .eq("tenant_id", tenantId)
+    .eq("status", "active")
+    .not("teacher_id", "is", null)
+
+  if (error || !data) {
+    return {}
+  }
+
+  return data.reduce<Record<string, number>>((counts, row) => {
+    if (row.teacher_id) {
+      counts[row.teacher_id] = (counts[row.teacher_id] ?? 0) + 1
+    }
+    return counts
+  }, {})
+}
+
+function displayCount(value: number | null) {
+  return (value ?? 0).toLocaleString("en-BD")
 }
 
 function pageHref(params: Record<string, string | string[] | undefined>) {

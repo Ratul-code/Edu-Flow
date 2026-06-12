@@ -1,18 +1,12 @@
-import { PlusIcon } from "lucide-react"
-import Link from "next/link"
 import { Suspense } from "react"
 
 import { PageHeader } from "@/components/app/page-header"
 import { BatchListFilters } from "@/components/batches/batch-list-filters"
+import { BatchCreateSheet } from "@/components/batches/batch-sheet"
 import { BatchesTable } from "@/components/batches/batches-table"
-import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,6 +16,8 @@ import {
   getCachedBatchesList,
   type BatchStatus,
 } from "@/lib/data/batches"
+import { countTenantRecordsByStatus } from "@/lib/data/tenant-records"
+import { createClient } from "@/lib/supabase/server"
 
 type BatchesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -37,30 +33,22 @@ export default async function BatchesPage({ searchParams }: BatchesPageProps) {
     search: stringParam(params.q),
     status: statusParam(params.status),
   }
+  const [activeBatches, totalAssignedStudents] = await Promise.all([
+    countTenantRecordsByStatus("batches", admin.tenantId, "active"),
+    countActiveBatchAssignments(admin.tenantId),
+  ])
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        description="Create batches, manage student pricing, and plan weekly classes."
-        title="Batches"
-      />
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-1">
-            <CardTitle>Batch list</CardTitle>
-            <CardDescription>
-              Showing records for {admin.tenantName}. Batch fees feed the
-              monthly student ledger.
-            </CardDescription>
-          </div>
-          <CardAction>
-            <Button render={<Link href="/batches/new" />}>
-              <PlusIcon data-icon="inline-start" />
-              Create batch
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+    <div className="space-y-5 p-4 md:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <PageHeader
+          description={`${displayCount(activeBatches)} active · ${displayCount(totalAssignedStudents)} total students`}
+          title="Batches"
+        />
+        <BatchCreateSheet />
+      </div>
+      <Card className="gap-0 py-0">
+        <CardContent className="p-0">
           <Suspense fallback={<BatchesContentSkeleton />}>
             <BatchesContent
               filters={filters}
@@ -94,12 +82,14 @@ async function BatchesContent({
 
   return (
     <>
-      <BatchListFilters
-        classLevels={classLevels}
-        filters={filters}
-        groups={groups}
-        mediums={mediums}
-      />
+      <div className="border-b px-4 py-3">
+        <BatchListFilters
+          classLevels={classLevels}
+          filters={filters}
+          groups={groups}
+          mediums={mediums}
+        />
+      </div>
       <Suspense fallback={<BatchesResultsSkeleton />} key={batchesContentKey(params)}>
         <BatchesResults filters={filters} params={params} tenantId={tenantId} />
       </Suspense>
@@ -123,11 +113,16 @@ async function BatchesResults({
   tenantId: string
 }) {
   const batches = await getCachedBatchesList(tenantId, filters)
+  const studentCountsByBatchId = await countActiveStudentsByBatchId(tenantId)
 
   return (
     <>
       {batches.length ? (
-        <BatchesTable batches={batches} currentPath={pageHref(params)} />
+        <BatchesTable
+          batches={batches}
+          currentPath={pageHref(params)}
+          studentCountsByBatchId={studentCountsByBatchId}
+        />
       ) : (
         <Empty>
           <EmptyHeader>
@@ -136,10 +131,7 @@ async function BatchesResults({
               Create a batch or adjust the search and filters.
             </EmptyDescription>
           </EmptyHeader>
-          <Button render={<Link href="/batches/new" />}>
-            <PlusIcon data-icon="inline-start" />
-            Create batch
-          </Button>
+          <BatchCreateSheet />
         </Empty>
       )}
     </>
@@ -148,12 +140,12 @@ async function BatchesResults({
 
 function BatchesContentSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Skeleton className="h-10 flex-1 rounded-full" />
+    <div className="flex flex-col">
+      <div className="flex flex-col gap-2 border-b px-4 py-3 lg:flex-row lg:items-center">
+        <Skeleton className="h-8 flex-1 rounded-md" />
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton className="h-10 w-28 rounded-lg" key={index} />
+            <Skeleton className="h-8 w-28 rounded-md" key={index} />
           ))}
         </div>
       </div>
@@ -164,10 +156,10 @@ function BatchesContentSkeleton() {
 
 function BatchesResultsSkeleton() {
   return (
-    <div className="rounded-lg border">
+    <div>
       {Array.from({ length: 7 }).map((_, index) => (
         <div
-          className="grid grid-cols-[3rem_1.5fr_repeat(5,1fr)] gap-4 border-b p-3 last:border-b-0"
+          className="grid grid-cols-[1.4fr_1.2fr_repeat(6,1fr)_3rem] gap-4 border-b p-3 last:border-b-0"
           key={index}
         >
           {Array.from({ length: 7 }).map((__, cellIndex) => (
@@ -177,6 +169,43 @@ function BatchesResultsSkeleton() {
       ))}
     </div>
   )
+}
+
+async function countActiveBatchAssignments(tenantId: string) {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from("student_batches")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .eq("status", "active")
+
+  if (error) {
+    return null
+  }
+
+  return count ?? 0
+}
+
+async function countActiveStudentsByBatchId(tenantId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_batches")
+    .select("batch_id")
+    .eq("tenant_id", tenantId)
+    .eq("status", "active")
+
+  if (error || !data) {
+    return {}
+  }
+
+  return data.reduce<Record<string, number>>((counts, row) => {
+    counts[row.batch_id] = (counts[row.batch_id] ?? 0) + 1
+    return counts
+  }, {})
+}
+
+function displayCount(value: number | null) {
+  return (value ?? 0).toLocaleString("en-BD")
 }
 
 function pageHref(params: Record<string, string | string[] | undefined>) {

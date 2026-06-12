@@ -104,6 +104,30 @@ export async function archiveTeacher(teacherId: string, formData?: FormData) {
   })
 }
 
+export async function updateTeacherNotes(teacherId: string, formData: FormData) {
+  const admin = await requireAdminContext()
+  const supabase = await createClient()
+  const notes = stringField(formData, "notes")
+
+  const { error } = await supabase
+    .from("teachers")
+    .update({ notes: notes || null })
+    .eq("tenant_id", admin.tenantId)
+    .eq("id", teacherId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidateTag(TEACHERS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath(`/teachers/${teacherId}`)
+  redirectWithFlashToast(`/teachers/${teacherId}`, {
+    title: "Notes saved",
+    message: "Teacher notes have been updated.",
+    tone: "success",
+  })
+}
+
 function stringField(formData: FormData | undefined, key: string) {
   const value = formData?.get(key)
 

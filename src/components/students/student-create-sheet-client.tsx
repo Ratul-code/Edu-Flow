@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronRightIcon, PlusIcon, UserPlusIcon } from "lucide-react"
+import { PlusIcon, UserPlusIcon } from "lucide-react"
 import { useActionState, useState, type FormEvent } from "react"
 
 import { StudentFields } from "@/components/students/student-fields"
@@ -32,6 +32,7 @@ import {
   studentSchema,
   type FormState,
 } from "@/lib/schemas"
+import { cn } from "@/lib/utils"
 
 type StudentCreateSheetClientProps = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>
@@ -40,8 +41,9 @@ type StudentCreateSheetClientProps = {
   defaultFeeStartMonth: string
   groupOptions: AcademicGroupRecord[]
   tableExists: boolean
+  triggerClassName?: string
   triggerLabel?: string
-  triggerVariant?: "button" | "quick-action"
+  triggerVariant?: "button" | "outline" | "quick-action"
 }
 
 export function StudentCreateSheetClient({
@@ -51,6 +53,7 @@ export function StudentCreateSheetClient({
   defaultFeeStartMonth,
   groupOptions,
   tableExists,
+  triggerClassName,
   triggerLabel = "Add student",
   triggerVariant = "button",
 }: StudentCreateSheetClientProps) {
@@ -139,23 +142,28 @@ export function StudentCreateSheetClient({
                 type="button"
               />
             ) : (
-              <Button />
+              <Button
+                className={triggerClassName}
+                variant={triggerVariant === "outline" ? "outline" : "default"}
+              />
             )
           }
         >
           {triggerVariant === "quick-action" ? (
             <>
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <UserPlusIcon />
-                </span>
+              <span className="flex min-w-0 items-center gap-2">
+                <UserPlusIcon className="size-4 text-muted-foreground" />
                 <span className="truncate font-medium">{triggerLabel}</span>
               </span>
-              <ChevronRightIcon className="text-muted-foreground" />
             </>
           ) : (
             <>
-              <PlusIcon data-icon="inline-start" />
+              <PlusIcon
+                className={cn(
+                  triggerVariant === "outline" && "text-muted-foreground"
+                )}
+                data-icon="inline-start"
+              />
               {triggerLabel}
             </>
           )}

@@ -28,6 +28,7 @@ export type TeacherSalaryLedgerRecord = {
   generated_at: string
   created_at: string
   updated_at: string
+  latest_payment?: TeacherSalaryPaymentRecord | null
   teacher?: {
     id: string
     name: string
@@ -38,6 +39,7 @@ export type TeacherSalaryLedgerRecord = {
 
 export type TeacherSalaryPaymentRecord = {
   id: string
+  ledger_id?: string
   receipt_number: string
   amount: number | string
   method: SalaryPaymentMethod
@@ -176,7 +178,7 @@ export async function listTeacherSalaryLedgers(
     return []
   }
 
-  return (data as unknown as RawTeacherSalaryLedgerRecord[])
+  const ledgers = (data as unknown as RawTeacherSalaryLedgerRecord[])
     .map(normalizeLedger)
     .filter((ledger) => {
       if (ledger.payment_start_date <= today()) {
@@ -185,6 +187,15 @@ export async function listTeacherSalaryLedgers(
 
       return ledger.status === "partial" || ledger.status === "paid" || ledger.status === "waived"
     })
+  const latestPayments = await latestSalaryPaymentsByLedgerId(
+    tenantId,
+    ledgers.map((ledger) => ledger.id)
+  )
+
+  return ledgers.map((ledger) => ({
+    ...ledger,
+    latest_payment: latestPayments.get(ledger.id) ?? null,
+  }))
 }
 
 export async function getTeacherSalaryLedgerById(
@@ -226,6 +237,37 @@ export async function listTeacherSalaryPayments(
   return data as TeacherSalaryPaymentRecord[]
 }
 
+export async function listTeacherSalaryHistory(
+  tenantId: string,
+  teacherId: string
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("teacher_salary_ledgers")
+    .select(salaryLedgerSelect)
+    .eq("tenant_id", tenantId)
+    .eq("teacher_id", teacherId)
+    .order("ledger_month", { ascending: false })
+    .limit(12)
+
+  if (error || !data) {
+    return []
+  }
+
+  const ledgers = (data as unknown as RawTeacherSalaryLedgerRecord[]).map(
+    normalizeLedger
+  )
+  const latestPayments = await latestSalaryPaymentsByLedgerId(
+    tenantId,
+    ledgers.map((ledger) => ledger.id)
+  )
+
+  return ledgers.map((ledger) => ({
+    ...ledger,
+    latest_payment: latestPayments.get(ledger.id) ?? null,
+  }))
+}
+
 type RawTeacherSalaryLedgerRecord = Omit<
   TeacherSalaryLedgerRecord,
   "teacher"
@@ -242,6 +284,39 @@ function normalizeLedger(
     ...ledger,
     teacher: firstNested(ledger.teacher),
   }
+}
+
+async function latestSalaryPaymentsByLedgerId(
+  tenantId: string,
+  ledgerIds: string[]
+) {
+  const uniqueLedgerIds = Array.from(new Set(ledgerIds))
+  const paymentMap = new Map<string, TeacherSalaryPaymentRecord>()
+
+  if (!uniqueLedgerIds.length) {
+    return paymentMap
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("teacher_salary_payments")
+    .select("id, ledger_id, receipt_number, amount, method, payment_date, note")
+    .eq("tenant_id", tenantId)
+    .in("ledger_id", uniqueLedgerIds)
+    .order("payment_date", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (error || !data) {
+    return paymentMap
+  }
+
+  for (const payment of data as TeacherSalaryPaymentRecord[]) {
+    if (payment.ledger_id && !paymentMap.has(payment.ledger_id)) {
+      paymentMap.set(payment.ledger_id, payment)
+    }
+  }
+
+  return paymentMap
 }
 
 function firstNested<T>(value: T | T[] | null | undefined) {

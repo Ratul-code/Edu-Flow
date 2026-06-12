@@ -217,6 +217,8 @@ export async function recordTeacherSalaryPayment(
   }
 
   revalidatePath("/salaries")
+  revalidatePath(`/salaries/${ledger.id}/payment`)
+  revalidatePath(`/teachers/${ledger.teacher_id}`)
   redirectWithFlashToast(`/salaries?month=${monthInputValue(ledger.ledger_month)}`, {
     title: nextDueAmount <= 0 ? "Salary fully paid" : "Partial salary recorded",
     message:

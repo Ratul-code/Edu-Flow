@@ -35,6 +35,7 @@ export type StudentLedgerRecord = {
   created_at: string
   updated_at: string
   latest_payment?: StudentPaymentReceiptSummary | null
+  batch_names?: string[]
   student?: {
     id: string
     name: string
@@ -76,6 +77,7 @@ export type StudentPaymentRecord = {
 
 export type StudentPaymentReceiptSummary = {
   amount: number | string
+  created_at: string
   due_amount_after_payment: number | string
   id: string
   method: PaymentMethod
@@ -89,7 +91,7 @@ export type StudentPaymentReceiptSummary = {
 export type StudentLedgerFilters = {
   batchId?: string
   search?: string
-  status?: LedgerStatus | "all" | "attention"
+  status?: LedgerStatus | "all" | "attention" | "overdue_due"
 }
 
 const ledgerSelect = `
@@ -147,7 +149,7 @@ export async function listStudentLedgers(
         return false
       }
 
-      if (status === "attention") {
+      if (status === "attention" || status === "overdue_due") {
         if (ledger.status !== "overdue" && ledger.status !== "due") {
           return false
         }
@@ -174,9 +176,14 @@ export async function listStudentLedgers(
     tenantId,
     ledgers.map((ledger) => ledger.id)
   )
+  const batchNamesByStudentId = await activeBatchNamesByStudentId(
+    tenantId,
+    ledgers.map((ledger) => ledger.student_id)
+  )
 
   return ledgers.map((ledger) => ({
     ...ledger,
+    batch_names: batchNamesByStudentId.get(ledger.student_id) ?? [],
     latest_payment: latestPayments.get(ledger.id) ?? null,
   }))
 }
@@ -477,6 +484,55 @@ async function listStudentIdsForBatch(tenantId: string, batchId: string) {
   return new Set(data.map((row) => row.student_id))
 }
 
+async function activeBatchNamesByStudentId(
+  tenantId: string,
+  studentIds: string[]
+) {
+  const uniqueStudentIds = Array.from(new Set(studentIds))
+  const namesByStudentId = new Map<string, string[]>()
+
+  if (!uniqueStudentIds.length) {
+    return namesByStudentId
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_batches")
+    .select(
+      `
+        student_id,
+        batch:batches (
+          name
+        )
+      `
+    )
+    .eq("tenant_id", tenantId)
+    .eq("status", "active")
+    .in("student_id", uniqueStudentIds)
+
+  if (error || !data) {
+    return namesByStudentId
+  }
+
+  for (const row of data as Array<{
+    student_id: string
+    batch?: { name: string | null } | Array<{ name: string | null }> | null
+  }>) {
+    const batch = firstNested(row.batch)
+    const name = batch?.name?.trim()
+
+    if (!name) {
+      continue
+    }
+
+    const names = namesByStudentId.get(row.student_id) ?? []
+    names.push(name)
+    namesByStudentId.set(row.student_id, names)
+  }
+
+  return namesByStudentId
+}
+
 async function latestPaymentsByLedgerId(tenantId: string, ledgerIds: string[]) {
   const uniqueLedgerIds = Array.from(new Set(ledgerIds))
   const paymentMap = new Map<string, StudentPaymentReceiptSummary>()
@@ -507,6 +563,7 @@ async function latestPaymentsByLedgerId(tenantId: string, ledgerIds: string[]) {
 
     paymentMap.set(payment.ledger_id, {
       amount: payment.amount,
+      created_at: payment.created_at,
       due_amount_after_payment: 0,
       id: payment.id,
       method: payment.method,
@@ -560,6 +617,7 @@ async function paymentsByLedgerId(
     const payments = paymentMap.get(payment.ledger_id) ?? []
     payments.push({
       amount: payment.amount,
+      created_at: payment.created_at,
       due_amount_after_payment: dueAmount,
       id: payment.id,
       method: payment.method,
@@ -599,9 +657,9 @@ function statusSortWeight(status: string) {
     overdue: 0,
     due: 1,
     partial: 2,
-    not_started: 3,
-    not_prepared: 4,
-    paid: 5,
+    paid: 3,
+    not_started: 4,
+    not_prepared: 5,
     waived: 6,
   }
 

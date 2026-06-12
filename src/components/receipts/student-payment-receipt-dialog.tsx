@@ -61,15 +61,15 @@ export function StudentPaymentReceiptDialog({
       <DialogTrigger
         render={
           <Button
-            className="border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-            size="sm"
+            className="gap-1 cursor-pointer text-muted-foreground"
+            size="xs"
             type="button"
-            variant="outline"
+            variant="ghost"
           />
         }
       >
-        <ReceiptTextIcon data-icon="inline-start" />
-        View Receipt
+        <ReceiptTextIcon className="size-3" data-icon="inline-start" />
+        Receipt
       </DialogTrigger>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[760px]">
         <DialogHeader>

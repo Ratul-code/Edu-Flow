@@ -1,10 +1,10 @@
 import {
   BellIcon,
   BookOpenIcon,
-  ChevronRightIcon,
   ReceiptTextIcon,
   UserPlusIcon,
 } from "lucide-react"
+import Link from "next/link"
 
 import { createBatch } from "@/lib/actions/batches"
 import { recordStudentPaymentFromDashboard } from "@/lib/actions/fees"
@@ -46,33 +46,33 @@ type QuickActionsProps = {
 const actions = [
   {
     icon: UserPlusIcon,
-    title: "Add New Student",
-    tone: "text-primary bg-primary/10",
+    title: "New Student",
+    tone: "text-muted-foreground",
     type: "student",
   },
   {
     icon: BookOpenIcon,
-    title: "Create New Batch",
-    tone: "text-chart-2 bg-chart-2/10",
+    title: "Create Batch",
+    tone: "text-muted-foreground",
     type: "batch",
   },
   {
     icon: ReceiptTextIcon,
-    title: "Record Fee Payment",
-    tone: "text-chart-1 bg-chart-1/10",
+    title: "Record Fee",
+    tone: "text-muted-foreground",
     type: "payment",
   },
   {
     icon: BellIcon,
-    title: "Send Notification",
-    tone: "text-chart-3 bg-chart-3/10",
+    title: "Notifications",
+    tone: "text-muted-foreground",
     type: "notification",
   },
 ] as const
 
 export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
   return (
-    <div className="flex flex-col gap-3">
+    <>
       {actions.map((action) => {
         const Icon = action.icon
 
@@ -83,8 +83,23 @@ export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
               batches={batches}
               key={action.type}
               triggerLabel={action.title}
-              triggerVariant="quick-action"
+              triggerClassName="h-auto flex-col gap-2 py-3 text-xs font-medium"
+              triggerVariant="outline"
             />
+          )
+        }
+
+        if (action.type === "notification") {
+          return (
+            <Button
+              className="h-auto flex-col gap-2 py-3 text-xs font-medium"
+              key={action.type}
+              render={<Link href="/notifications" />}
+              variant="outline"
+            >
+              <Icon className={`size-4 ${action.tone}`} />
+              {action.title}
+            </Button>
           )
         }
 
@@ -93,32 +108,24 @@ export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
             <DialogTrigger
               render={
                 <button
-                  className="flex h-14 w-full items-center justify-between gap-3 rounded-lg border bg-background px-3 text-left text-sm transition-colors hover:bg-muted"
+                  className="inline-flex h-auto flex-col items-center justify-center gap-2 rounded-md border bg-background px-3 py-3 text-xs font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
                   type="button"
                 />
               }
             >
-              <span className="flex min-w-0 items-center gap-3">
-                <span
-                  className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${action.tone}`}
-                >
-                  <Icon />
-                </span>
-                <span className="truncate font-medium">{action.title}</span>
-              </span>
-              <ChevronRightIcon className="text-muted-foreground" />
+              <Icon className={`size-4 ${action.tone}`} />
+              {action.title}
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               {action.type === "batch" ? <BatchDialog /> : null}
               {action.type === "payment" ? (
                 <PaymentDialog dueLedgers={dueLedgers} />
               ) : null}
-              {action.type === "notification" ? <NotificationDialog /> : null}
             </DialogContent>
           </Dialog>
         )
       })}
-    </div>
+    </>
   )
 }
 
@@ -150,7 +157,11 @@ function BatchDialog() {
           </Field>
           <Field>
             <FieldLabel htmlFor="qa-batch-class">Class level</FieldLabel>
-            <Input id="qa-batch-class" name="class_level" />
+            <Input id="qa-batch-class" name="class_level" required />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="qa-batch-subject">Subjects</FieldLabel>
+            <Input id="qa-batch-subject" name="subject" required />
           </Field>
           <Field>
             <FieldLabel htmlFor="qa-batch-medium">Medium</FieldLabel>
@@ -242,33 +253,6 @@ function PaymentDialog({ dueLedgers }: { dueLedgers: DueLedgerOption[] }) {
           </Button>
         </DialogFooter>
       </form>
-    </>
-  )
-}
-
-function NotificationDialog() {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Send Notification</DialogTitle>
-        <DialogDescription>
-          Notification templates and delivery logs will be connected in the
-          notifications phase.
-        </DialogDescription>
-      </DialogHeader>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="qa-notification-title">Title</FieldLabel>
-          <Input id="qa-notification-title" placeholder="Monthly test schedule" />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="qa-notification-message">Message</FieldLabel>
-          <Input id="qa-notification-message" placeholder="Message preview" />
-        </Field>
-      </FieldGroup>
-      <DialogFooter showCloseButton>
-        <Button disabled>Send later</Button>
-      </DialogFooter>
     </>
   )
 }

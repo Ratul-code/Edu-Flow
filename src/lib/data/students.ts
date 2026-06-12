@@ -62,6 +62,14 @@ export type StudentsFilterOptions = {
   tags: string[]
 }
 
+export type StudentBatchAssignmentRecord = {
+  id: string
+  batch_id: string
+  joined_at: string
+  status: string
+  batch: BatchRecord | null
+}
+
 export const STUDENTS_ROUTE_CACHE_TAG = "students-route"
 
 const studentSelect = `
@@ -404,6 +412,59 @@ export async function listStudentBatchIds(tenantId: string, studentId: string) {
   return data.map((row) => row.batch_id)
 }
 
+export async function listStudentBatchAssignments(
+  tenantId: string,
+  studentId: string
+): Promise<StudentBatchAssignmentRecord[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("student_batches")
+    .select(
+      `
+        id,
+        batch_id,
+        joined_at,
+        status,
+        batch:batches (
+          id,
+          tenant_id,
+          name,
+          subject,
+          class_level,
+          medium,
+          group_name,
+          monthly_fee,
+          teacher_id,
+          status,
+          created_at,
+          updated_at
+        )
+      `
+    )
+    .eq("tenant_id", tenantId)
+    .eq("student_id", studentId)
+    .eq("status", "active")
+    .order("joined_at", { ascending: false })
+
+  if (error || !data) {
+    return []
+  }
+
+  return (data as Array<{
+    batch?: BatchRecord | BatchRecord[] | null
+    batch_id: string
+    id: string
+    joined_at: string
+    status: string
+  }>).map((row) => ({
+    batch: firstNested(row.batch) ?? null,
+    batch_id: row.batch_id,
+    id: row.id,
+    joined_at: row.joined_at,
+    status: row.status,
+  }))
+}
+
 async function listBatchIdsForStudents(tenantId: string, studentIds: string[]) {
   const supabase = createAdminClient()
   const { data, error } = await supabase
@@ -499,4 +560,8 @@ function distinctTags(rows: unknown): string[] {
 
 function isString(value: unknown): value is string {
   return typeof value === "string" && Boolean(value.trim())
+}
+
+function firstNested<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }

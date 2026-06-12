@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { ReactElement } from "react"
 
 import { StudentCreateSheetClient } from "@/components/students/student-create-sheet-client"
 import { StudentEditSheetClient } from "@/components/students/student-edit-sheet-client"
@@ -36,8 +37,9 @@ type StudentFormProps = {
 type StudentCreateSheetProps = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>
   batches?: BatchRecord[]
+  triggerClassName?: string
   triggerLabel?: string
-  triggerVariant?: "button" | "quick-action"
+  triggerVariant?: "button" | "outline" | "quick-action"
 }
 
 export async function StudentForm({
@@ -85,6 +87,7 @@ export async function StudentForm({
 export async function StudentCreateSheet({
   action,
   batches = [],
+  triggerClassName,
   triggerLabel,
   triggerVariant,
 }: StudentCreateSheetProps) {
@@ -99,6 +102,7 @@ export async function StudentCreateSheet({
       defaultFeeStartMonth={monthInputValue(currentMonthStart())}
       groupOptions={academicGroups}
       tableExists={tableExists}
+      triggerClassName={triggerClassName}
       triggerLabel={triggerLabel}
       triggerVariant={triggerVariant}
     />
@@ -111,6 +115,7 @@ export async function StudentEditSheet({
   batches = [],
   student,
   returnPath,
+  trigger,
   triggerSize = "default",
 }: {
   action: (formData: FormData) => void | Promise<void>
@@ -118,6 +123,7 @@ export async function StudentEditSheet({
   batches?: BatchRecord[]
   returnPath?: string
   student: StudentRecord
+  trigger?: ReactElement
   triggerSize?: "default" | "icon-sm"
 }) {
   const { classLevels, tableExists } = await getClassLevelOptions()
@@ -133,6 +139,7 @@ export async function StudentEditSheet({
       returnPath={returnPath}
       student={student}
       tableExists={tableExists}
+      trigger={trigger}
       triggerSize={triggerSize}
     />
   )
