@@ -7,6 +7,7 @@ export type TenantProfileRecord = {
   contact_phone: string | null
   email: string | null
   id: string
+  logo_url: string | null
   name: string
   secondary_phone: string | null
   subscription_status: string
@@ -19,7 +20,7 @@ export const getTenantProfile = cache(async function getTenantProfile(
   const { data, error } = await supabase
     .from("tenants")
     .select(
-      "id, name, address, contact_phone, secondary_phone, email, subscription_status"
+      "id, name, address, contact_phone, secondary_phone, email, logo_url, subscription_status"
     )
     .eq("id", tenantId)
     .maybeSingle()

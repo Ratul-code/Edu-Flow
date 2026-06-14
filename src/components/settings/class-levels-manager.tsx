@@ -1,14 +1,16 @@
 "use client"
 
-import * as React from "react"
+import { AlertCircleIcon, BookOpenIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { useState, useTransition } from "react"
-import { AlertCircleIcon, CopyIcon, CheckIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
-import type { ClassLevelRecord } from "@/lib/data/class-levels"
-import { createClassLevel, deleteClassLevel } from "@/lib/actions/class-levels"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -16,9 +18,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import {
+  createClassLevel,
+  deleteClassLevel,
+  updateClassLevel,
+} from "@/lib/actions/class-levels"
+import type { ClassLevelRecord } from "@/lib/data/class-levels"
 
 type ClassLevelsManagerProps = {
   classLevels: ClassLevelRecord[]
@@ -29,194 +37,160 @@ export function ClassLevelsManager({
   classLevels,
   tableExists,
 }: ClassLevelsManagerProps) {
-  const [open, setOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [editing, setEditing] = useState<ClassLevelRecord | null>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const sqlCode = `-- Run this in your Supabase SQL Editor to create the class_levels table:
-
-create table if not exists public.class_levels (
-  id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null references public.tenants(id) on delete cascade,
-  name text not null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (tenant_id, name)
-);
-
-alter table public.class_levels enable row level security;
-
-drop policy if exists "Admins can manage class levels in their tenant" on public.class_levels;
-create policy "Admins can manage class levels in their tenant"
-on public.class_levels
-for all
-to authenticated
-using (tenant_id = (select public.current_admin_tenant_id()))
-with check (tenant_id = (select public.current_admin_tenant_id()));`
-
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(sqlCode)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const form = e.currentTarget
-    const formData = new FormData(form)
-
+  function handleCreate(formData: FormData) {
     setError(null)
     startTransition(async () => {
       try {
         await createClassLevel(formData)
-        setOpen(false)
-        form.reset()
-      } catch (err: unknown) {
-        setError(errorMessage(err, "Failed to create class level."))
+      } catch (caughtError) {
+        setError(errorMessage(caughtError, "Could not add class level."))
       }
     })
   }
 
-  const handleDelete = (id: string) => {
-    if (!confirm("Are you sure you want to delete this class level? This won't delete students or batches, but it will remove the class level option.")) {
+  function handleUpdate(formData: FormData) {
+    if (!editing) return
+
+    setError(null)
+    startTransition(async () => {
+      try {
+        await updateClassLevel(editing.id, formData)
+        setEditing(null)
+      } catch (caughtError) {
+        setError(errorMessage(caughtError, "Could not update class level."))
+      }
+    })
+  }
+
+  function handleDelete(level: ClassLevelRecord) {
+    if (!confirm(`Remove "${level.name}" from class levels?`)) {
       return
     }
 
-    setDeletingId(id)
+    setError(null)
     startTransition(async () => {
       try {
-        await deleteClassLevel(id)
-      } catch (err: unknown) {
-        alert(errorMessage(err, "Failed to delete class level."))
-      } finally {
-        setDeletingId(null)
+        await deleteClassLevel(level.id)
+      } catch (caughtError) {
+        setError(errorMessage(caughtError, "Could not remove class level."))
       }
     })
   }
 
-  if (!tableExists) {
-    return (
-      <div className="flex flex-col gap-6">
-        <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20">
-          <AlertCircleIcon className="size-5" />
-          <AlertTitle className="text-base font-semibold">Database Schema Update Required</AlertTitle>
-          <AlertDescription className="mt-2 text-sm text-muted-foreground">
-            The `class_levels` table is missing in your Supabase database. Please run the SQL migration below in your <strong>Supabase SQL Editor</strong> to enable this feature.
-          </AlertDescription>
-        </Alert>
-
-        <div className="relative rounded-xl border bg-muted/30 p-4 font-mono text-xs text-muted-foreground overflow-x-auto">
-          <Button
-            size="icon-sm"
-            variant="outline"
-            className="absolute top-3 right-3 bg-white"
-            onClick={handleCopySql}
-          >
-            {copied ? <CheckIcon className="size-4 text-emerald-600" /> : <CopyIcon className="size-4" />}
-          </Button>
-          <pre className="whitespace-pre">{sqlCode}</pre>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <Card className="gap-4 py-5">
+      <CardHeader className="flex-row items-center justify-between px-5 pb-0 pt-0">
         <div>
-          <h3 className="text-lg font-medium text-foreground">Class Levels</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage the dynamic class levels available for students and batches.
-          </p>
-        </div>
-
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button size="sm"><PlusIcon className="size-4" /> Add Class Level</Button>} />
-          <DialogContent>
-            <form onSubmit={handleCreate}>
-              <DialogHeader>
-                <DialogTitle>Add Class Level</DialogTitle>
-                <DialogDescription>
-                  Create a new class level (e.g. Class 8, Class 9, HSC 1st Year).
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="my-4">
-                <Field>
-                  <FieldLabel htmlFor="modal-class-name">Class Name</FieldLabel>
-                  <Input
-                    id="modal-class-name"
-                    name="name"
-                    placeholder="e.g. Class 9"
-                    required
-                    disabled={isPending}
-                    autoFocus
-                  />
-                </Field>
-                {error && (
-                  <p className="mt-2 text-xs font-medium text-destructive">{error}</p>
-                )}
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={() => setOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-        {classLevels.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <AlertCircleIcon className="size-8 text-muted-foreground/60 mb-2" />
-            <p className="text-sm font-medium text-muted-foreground">No class levels configured</p>
-            <p className="text-xs text-muted-foreground/75 mt-0.5">
-              Add your first class level to start using it in your forms.
-            </p>
+          <div className="flex items-center gap-2">
+            <BookOpenIcon className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold">Class Levels</CardTitle>
           </div>
+          <CardDescription className="mt-0.5 text-xs">
+            {classLevels.length} levels configured
+          </CardDescription>
+        </div>
+        <Button disabled={!tableExists} size="icon-xs" type="button" variant="outline">
+          <PlusIcon className="size-3.5" />
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-1.5 px-5 pt-2">
+        {!tableExists ? (
+          <p className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+            Apply the latest migration to edit class levels here.
+          </p>
+        ) : null}
+        {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
+        {classLevels.length ? (
+          classLevels.map((level) => (
+            <div
+              className="flex items-center justify-between rounded-md border px-3 py-2"
+              key={level.id}
+            >
+              <span className="text-sm">{level.name}</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  disabled={isPending || !tableExists}
+                  onClick={() => setEditing(level)}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <PencilIcon className="size-3" />
+                  <span className="sr-only">Edit {level.name}</span>
+                </Button>
+                <Button
+                  className="text-muted-foreground hover:text-destructive"
+                  disabled={isPending || !tableExists}
+                  onClick={() => handleDelete(level)}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2Icon className="size-3" />
+                  <span className="sr-only">Delete {level.name}</span>
+                </Button>
+              </div>
+            </div>
+          ))
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/30 border-b text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <th className="px-6 py-3">Class Level Name</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {classLevels.map((level) => (
-                <tr key={level.id} className="hover:bg-muted/10">
-                  <td className="px-6 py-4 font-medium text-foreground">{level.name}</td>
-                  <td className="px-6 py-4 text-right">
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/5 hover:text-destructive"
-                      disabled={isPending && deletingId === level.id}
-                      onClick={() => handleDelete(level.id)}
-                    >
-                      <Trash2Icon className="size-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground">
+            <AlertCircleIcon className="size-4" />
+            No class levels configured
+          </div>
         )}
-      </div>
-    </div>
+        <form action={handleCreate} className="flex gap-2 pt-1">
+          <Input
+            className="h-7 flex-1 text-xs"
+            disabled={isPending || !tableExists}
+            name="name"
+            placeholder="New class level..."
+            required
+          />
+          <Button
+            className="h-7 px-2 text-xs"
+            disabled={isPending || !tableExists}
+            size="sm"
+            type="submit"
+          >
+            Add
+          </Button>
+        </form>
+      </CardContent>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <form action={handleUpdate}>
+            <DialogHeader>
+              <DialogTitle>Edit class level</DialogTitle>
+              <DialogDescription>
+                Rename this class level for future student and batch forms.
+              </DialogDescription>
+            </DialogHeader>
+            <Field className="my-4">
+              <FieldLabel htmlFor="edit-class-level">Class level</FieldLabel>
+              <Input
+                defaultValue={editing?.name ?? ""}
+                id="edit-class-level"
+                name="name"
+                required
+              />
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+                Cancel
+              </Button>
+              <Button disabled={isPending} type="submit">
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Card>
   )
 }
 

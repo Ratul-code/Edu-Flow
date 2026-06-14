@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ConfirmActionForm } from "@/components/app/confirm-action-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -139,7 +140,13 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 px-5 pt-2">
-              <form action={recordStudentPayment.bind(null, ledger.id)}>
+              <ConfirmActionForm
+                action={recordStudentPayment.bind(null, ledger.id)}
+                confirmLabel="Confirm payment"
+                description="This will record the student payment, update the ledger, and generate a receipt number."
+                pendingLabel="Recording payment..."
+                title="Record this payment?"
+              >
                 <input name="payment_action" type="hidden" value="payment" />
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -253,7 +260,7 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
                     </Button>
                   </div>
                 </div>
-              </form>
+              </ConfirmActionForm>
             </CardContent>
           </Card>
         </div>

@@ -7,6 +7,7 @@ import type { BatchRecord } from "@/lib/data/batches"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { TagInput } from "@/components/ui/tag-input"
 import {
   Select,
   SelectContent,
@@ -25,12 +26,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import type { MediumOptionRecord } from "@/lib/data/medium-options"
 
 type BatchFormClientProps = {
   academicGroups: { id: string; name: string }[]
   action: (formData: FormData) => void | Promise<void>
   batch?: BatchRecord
   classLevels: { id: string; name: string }[]
+  mediumOptions: MediumOptionRecord[]
   submitLabel: string
   tableExists: boolean
 }
@@ -40,12 +43,14 @@ export function BatchFormClient({
   action,
   batch,
   classLevels,
+  mediumOptions,
   submitLabel,
   tableExists,
 }: BatchFormClientProps) {
   const formRef = React.useRef<HTMLFormElement>(null)
   const feeStartOptionRef = React.useRef<HTMLInputElement>(null)
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false)
+  const [isFeeTimingSubmitting, setIsFeeTimingSubmitting] = React.useState(false)
   const originalFee = Number(batch?.monthly_fee ?? 0)
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -69,6 +74,7 @@ export function BatchFormClient({
 
     feeStartOptionRef.current.value = timing
     setIsConfirmOpen(false)
+    setIsFeeTimingSubmitting(true)
     formRef.current.requestSubmit()
   }
 
@@ -92,39 +98,31 @@ export function BatchFormClient({
               <FieldLabel htmlFor={fieldId("class_level", batch)}>
                 Class level
               </FieldLabel>
-              {tableExists && classLevels.length > 0 ? (
-                <Select defaultValue={batch?.class_level ?? ""} name="class_level">
-                  <SelectTrigger className="h-8 w-full" id={fieldId("class_level", batch)}>
-                    <SelectValue placeholder="Select class" />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    <SelectGroup>
-                      {classLevels.map((level) => (
-                        <SelectItem key={level.id} value={level.name}>
-                          {level.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  id={fieldId("class_level", batch)}
-                  name="class_level"
-                  defaultValue={batch?.class_level ?? ""}
-                  placeholder="Class 10"
-                  required
-                />
-              )}
+              <Select
+                defaultValue={batch?.class_level ?? ""}
+                disabled={!tableExists || classLevels.length === 0}
+                name="class_level"
+              >
+                <SelectTrigger className="h-8 w-full" id={fieldId("class_level", batch)}>
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectGroup>
+                    {classLevels.map((level) => (
+                      <SelectItem key={level.id} value={level.name}>
+                        {level.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Field className="sm:col-span-2">
-              <FieldLabel htmlFor={fieldId("subject", batch)}>Subjects</FieldLabel>
-              <Input
-                id={fieldId("subject", batch)}
+              <FieldLabel>Subjects</FieldLabel>
+              <TagInput
+                defaultTags={tagsFromText(batch?.subject)}
                 name="subject"
-                defaultValue={batch?.subject ?? ""}
-                placeholder="Physics, Chemistry, Math"
-                required
+                placeholder="Type a subject and press Space to add..."
               />
             </Field>
             <Field>
@@ -136,9 +134,11 @@ export function BatchFormClient({
                 <SelectContent align="start">
                   <SelectGroup>
                     <SelectItem value="">Not set</SelectItem>
-                    <SelectItem value="Bangla Medium">Bangla Medium</SelectItem>
-                    <SelectItem value="English Version">English Version</SelectItem>
-                    <SelectItem value="English Medium">English Medium</SelectItem>
+                    {mediumOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.name}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -195,7 +195,9 @@ export function BatchFormClient({
             <SheetClose render={<Button type="button" variant="outline" />}>
               Cancel
             </SheetClose>
-            <Button type="submit">{submitLabel}</Button>
+            <Button disabled={isFeeTimingSubmitting} type="submit">
+              {isFeeTimingSubmitting ? "Saving..." : submitLabel}
+            </Button>
           </div>
         </SheetFooter>
       </form>
@@ -222,10 +224,10 @@ export function BatchFormClient({
               Discard
             </AlertDialogCancel>
             <Button type="button" variant="outline" onClick={() => submitWithFeeTiming("next")}>
-              Next month
+              {isFeeTimingSubmitting ? "Working..." : "Next month"}
             </Button>
             <Button type="button" onClick={() => submitWithFeeTiming("current")}>
-              This month
+              {isFeeTimingSubmitting ? "Working..." : "This month"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -236,4 +238,11 @@ export function BatchFormClient({
 
 function fieldId(name: string, batch?: BatchRecord) {
   return `${batch ? `batch-${batch.id}` : "new-batch"}-${name}`
+}
+
+function tagsFromText(value: string | null | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
 }

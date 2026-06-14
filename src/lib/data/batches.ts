@@ -2,6 +2,11 @@ import { unstable_cache } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
+import {
+  compareClassLevelNames,
+  defaultClassLevelNames,
+} from "@/lib/data/class-levels"
+import { defaultMediumNames } from "@/lib/data/medium-options"
 
 export type BatchStatus = "active" | "archived"
 export type StudentBatchStatus = "active" | "inactive" | "archived"
@@ -146,23 +151,22 @@ export const getCachedBatchesRouteData = unstable_cache(
       await Promise.all([
         batchesQuery,
         supabase
-          .from("batches")
-          .select("class_level")
+          .from("class_levels")
+          .select("name")
           .eq("tenant_id", tenantId)
-          .not("class_level", "is", null)
-          .order("class_level", { ascending: true }),
+          .order("name", { ascending: true }),
         supabase
-          .from("batches")
-          .select("medium")
+          .from("medium_options")
+          .select("name")
           .eq("tenant_id", tenantId)
-          .not("medium", "is", null)
-          .order("medium", { ascending: true }),
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true }),
         supabase
-          .from("batches")
-          .select("group_name")
+          .from("academic_groups")
+          .select("name")
           .eq("tenant_id", tenantId)
-          .not("group_name", "is", null)
-          .order("group_name", { ascending: true }),
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true }),
       ])
 
     return {
@@ -172,9 +176,11 @@ export const getCachedBatchesRouteData = unstable_cache(
           : (batchesResult.data as unknown as RawBatchRecord[]).map(
               normalizeBatch
             ),
-      classLevels: distinctValues(classLevelsResult.data, "class_level"),
-      groups: distinctValues(groupsResult.data, "group_name"),
-      mediums: distinctValues(mediumsResult.data, "medium"),
+      classLevels: optionValues(classLevelsResult.data, defaultClassLevelNames).sort(
+        compareClassLevelNames
+      ),
+      groups: optionValues(groupsResult.data, ["Science", "Commerce", "Arts"]),
+      mediums: optionValues(mediumsResult.data, defaultMediumNames),
     }
   },
   ["batches-route-data"],
@@ -191,29 +197,30 @@ export const getCachedBatchesFilterOptions = unstable_cache(
     const supabase = createAdminClient()
     const [classLevelsResult, mediumsResult, groupsResult] = await Promise.all([
       supabase
-        .from("batches")
-        .select("class_level")
+        .from("class_levels")
+        .select("name")
         .eq("tenant_id", tenantId)
-        .not("class_level", "is", null)
-        .order("class_level", { ascending: true }),
+        .order("name", { ascending: true }),
       supabase
-        .from("batches")
-        .select("medium")
+        .from("medium_options")
+        .select("name")
         .eq("tenant_id", tenantId)
-        .not("medium", "is", null)
-        .order("medium", { ascending: true }),
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
       supabase
-        .from("batches")
-        .select("group_name")
+        .from("academic_groups")
+        .select("name")
         .eq("tenant_id", tenantId)
-        .not("group_name", "is", null)
-        .order("group_name", { ascending: true }),
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
     ])
 
     return {
-      classLevels: distinctValues(classLevelsResult.data, "class_level"),
-      groups: distinctValues(groupsResult.data, "group_name"),
-      mediums: distinctValues(mediumsResult.data, "medium"),
+      classLevels: optionValues(classLevelsResult.data, defaultClassLevelNames).sort(
+        compareClassLevelNames
+      ),
+      groups: optionValues(groupsResult.data, ["Science", "Commerce", "Arts"]),
+      mediums: optionValues(mediumsResult.data, defaultMediumNames),
     }
   },
   ["batches-filter-options"],
@@ -496,26 +503,21 @@ function sanitizeSearchTerm(value?: string) {
   return value?.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ")
 }
 
-function distinctValues<T extends string>(
-  rows: unknown,
-  field: T
-): string[] {
+function optionValues(rows: unknown, fallback: string[]) {
   if (!Array.isArray(rows)) {
-    return []
+    return fallback
   }
 
-  return Array.from(
-    new Set(
-      rows
-        .map((row) =>
-          typeof row === "object" && row !== null
-            ? (row as Record<T, unknown>)[field]
-            : null
-        )
-        .filter(
-          (value): value is string =>
-            typeof value === "string" && Boolean(value.trim())
-        )
+  const values = rows
+    .map((row) =>
+      typeof row === "object" && row !== null
+        ? (row as { name?: unknown }).name
+        : null
     )
-  )
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && Boolean(value.trim())
+    )
+
+  return values.length ? Array.from(new Set(values)) : fallback
 }

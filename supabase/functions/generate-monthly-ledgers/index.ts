@@ -24,6 +24,8 @@ type BillingSettings = {
 type TeacherPaymentSettings = {
   tenant_id: string
   payment_system: BillingMode | null
+  payment_start_day: number | null
+  grace_period_days: number | null
 }
 
 type Student = {
@@ -239,7 +241,7 @@ async function createStudentLedgersForTenant(
 async function generateTeacherLedgers(today: string) {
   const { data: settingsRows, error: settingsError } = await supabase
     .from("teacher_payment_settings")
-    .select("tenant_id, payment_system")
+    .select("tenant_id, payment_system, payment_start_day, grace_period_days")
 
   if (settingsError) {
     throw settingsError
@@ -248,11 +250,12 @@ async function generateTeacherLedgers(today: string) {
   let inserted = 0
 
   for (const settings of (settingsRows ?? []) as TeacherPaymentSettings[]) {
-    const target = teacherTargetMonth(today, settings.payment_system ?? "prepaid")
+    const target = teacherTargetMonth(today, settings)
     inserted += await createTeacherLedgersForTenant(
       settings.tenant_id,
       target.ledgerMonth,
-      target.paymentStartDate
+      target.paymentStartDate,
+      target.graceEndDate
     )
   }
 
@@ -262,7 +265,8 @@ async function generateTeacherLedgers(today: string) {
 async function createTeacherLedgersForTenant(
   tenantId: string,
   ledgerMonth: string,
-  paymentStartDate: string
+  paymentStartDate: string,
+  graceEndDate: string
 ) {
   const { data: teachers, error: teachersError } = await supabase
     .from("teachers")
@@ -292,6 +296,7 @@ async function createTeacherLedgersForTenant(
       paid_amount: 0,
       due_amount: expectedSalary,
       status: teacherLedgerStatus(expectedSalary),
+      grace_end_date: graceEndDate,
       payment_start_date: paymentStartDate,
       generated_at: new Date().toISOString(),
     }
@@ -339,14 +344,26 @@ function studentTargetMonth(today: string, settings: BillingSettings) {
   }
 }
 
-function teacherTargetMonth(today: string, paymentSystem: BillingMode) {
+function teacherTargetMonth(today: string, settings: TeacherPaymentSettings) {
   const collectionMonth = monthStart(today)
   const ledgerMonth =
-    paymentSystem === "postpaid" ? addMonths(collectionMonth, -1) : collectionMonth
+    settings.payment_system === "postpaid"
+      ? addMonths(collectionMonth, -1)
+      : collectionMonth
+  const paymentStartDay = clamp(Math.trunc(settings.payment_start_day ?? 1), 1, 15)
+  const paymentStartDate = isoDate(
+    yearOf(collectionMonth),
+    monthOf(collectionMonth),
+    Math.min(paymentStartDay, daysInMonth(collectionMonth))
+  )
 
   return {
+    graceEndDate: addDays(
+      paymentStartDate,
+      clamp(Math.trunc(settings.grace_period_days ?? 7), 0, 15)
+    ),
     ledgerMonth,
-    paymentStartDate: collectionMonth,
+    paymentStartDate,
   }
 }
 

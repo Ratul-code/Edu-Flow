@@ -3,14 +3,16 @@
 import { PencilIcon, SearchIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import {
+  FeeTimingActionForm,
+  FeeTimingPendingOverlay,
+} from "@/components/app/fee-timing-action-form"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -51,6 +53,8 @@ export function BatchFeeOverrideSheet({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [feeOverride, setFeeOverride] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [isLedgerPending, setIsLedgerPending] = useState(false)
   const filteredAssignments = useMemo(() => {
     const q = search.trim().toLowerCase()
 
@@ -124,7 +128,7 @@ export function BatchFeeOverrideSheet({
   }
 
   return (
-    <Sheet>
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger
         render={
           <Button className="gap-1.5 text-xs" size="sm" type="button" variant="outline" />
@@ -133,7 +137,7 @@ export function BatchFeeOverrideSheet({
         <PencilIcon className="size-3" />
         Set Fee Override
       </SheetTrigger>
-      <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:!w-[92vw] data-[side=right]:!max-w-xl">
+      <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:!w-[92vw] data-[side=right]:!max-w-3xl">
         <div className="flex min-h-0 flex-1 flex-col">
           <SheetHeader className="border-b px-5 py-4">
             <SheetTitle>Edit Fee Override</SheetTitle>
@@ -258,7 +262,16 @@ export function BatchFeeOverrideSheet({
               Choose when to regenerate monthly ledgers with this override fee.
             </DialogDescription>
           </DialogHeader>
-          <form action={action}>
+          <FeeTimingActionForm
+            action={action}
+            onPendingChange={setIsLedgerPending}
+            onSubmitStart={() => {
+              setConfirmOpen(false)
+              setSheetOpen(false)
+            }}
+            successMessage="Fee overrides were saved and fee ledgers were updated."
+            successTitle="Fee overrides updated"
+          >
             <input name="fee_override" type="hidden" value={feeOverride} />
             {Array.from(selectedIds).map((studentId) => (
               <input
@@ -268,20 +281,10 @@ export function BatchFeeOverrideSheet({
                 value={studentId}
               />
             ))}
-            <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>
-                Discard
-              </DialogClose>
-              <Button name="fee_start_option" type="submit" value="next" variant="outline">
-                Next month
-              </Button>
-              <Button name="fee_start_option" type="submit" value="current">
-                This month
-              </Button>
-            </DialogFooter>
-          </form>
+          </FeeTimingActionForm>
         </DialogContent>
       </Dialog>
+      {isLedgerPending ? <FeeTimingPendingOverlay /> : null}
     </Sheet>
   )
 }

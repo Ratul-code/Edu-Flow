@@ -26,6 +26,7 @@ import {
 import type { BatchRecord } from "@/lib/data/batches"
 import type { ClassLevelRecord } from "@/lib/data/class-levels"
 import type { AcademicGroupRecord } from "@/lib/data/academic-groups"
+import type { MediumOptionRecord } from "@/lib/data/medium-options"
 import {
   formatZodErrors,
   initialFormState,
@@ -40,6 +41,7 @@ type StudentCreateSheetClientProps = {
   classLevels: ClassLevelRecord[]
   defaultFeeStartMonth: string
   groupOptions: AcademicGroupRecord[]
+  mediumOptions: MediumOptionRecord[]
   tableExists: boolean
   triggerClassName?: string
   triggerLabel?: string
@@ -52,6 +54,7 @@ export function StudentCreateSheetClient({
   classLevels,
   defaultFeeStartMonth,
   groupOptions,
+  mediumOptions,
   tableExists,
   triggerClassName,
   triggerLabel = "Add student",
@@ -200,6 +203,7 @@ export function StudentCreateSheetClient({
                 defaultFeeStartMonth={defaultFeeStartMonth}
                 errors={displayedErrors}
                 groupOptions={groupOptions}
+                mediumOptions={mediumOptions}
                 showFeeStartControls
                 tableExists={tableExists}
               />

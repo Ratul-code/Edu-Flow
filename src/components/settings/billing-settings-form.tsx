@@ -30,12 +30,12 @@ export function BillingSettingsForm({ settings }: BillingSettingsFormProps) {
   return (
     <form action={updateBillingSettings}>
       <Card>
-        <CardHeader>
+        <CardHeader className="gap-1">
           <div className="flex items-center gap-2">
-            <CalendarClockIcon className="size-5 text-primary" />
-            <CardTitle>Student Payment</CardTitle>
+            <CalendarClockIcon className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Student Payment</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Choose when monthly fee collection opens and when unpaid ledgers
             become overdue.
           </CardDescription>
@@ -97,8 +97,8 @@ export function BillingSettingsForm({ settings }: BillingSettingsFormProps) {
             between 0-15 days.
           </p>
         </CardContent>
-        <CardFooter className="justify-end">
-          <Button type="submit">
+        <CardFooter>
+          <Button className="w-full" size="sm" type="submit">
             <SaveIcon data-icon="inline-start" />
             Save settings
           </Button>

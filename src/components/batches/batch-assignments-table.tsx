@@ -1,9 +1,9 @@
-import { CalculatorIcon, UserMinusIcon } from "lucide-react";
+import { CalculatorIcon } from "lucide-react";
 import Link from "next/link";
 
-import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog";
 import { StatusBadge } from "@/components/app/status-badge";
 import { FeeOverrideForm } from "@/components/batches/fee-override-form";
+import { RemoveStudentBatchDialog } from "@/components/batches/remove-student-batch-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -107,20 +107,14 @@ export function BatchAssignmentsTable({
                     </form>
                   ) : null}
                   {assignment.status === "active" ? (
-                    <ArchiveConfirmDialog
+                    <RemoveStudentBatchDialog
                       action={archiveStudentBatch.bind(
                         null,
                         batch.id,
                         assignment.id
                       )}
-                      confirmLabel="Remove student"
-                      confirmVariant="destructive"
-                      description={`This will remove ${assignment.student?.name ?? "this student"} from ${batch.name}.`}
-                      itemName="student"
-                      title="Remove student?"
-                      triggerIcon={<UserMinusIcon />}
-                      triggerLabel="Remove student"
-                      triggerSize="icon-sm"
+                      batchName={batch.name}
+                      studentName={assignment.student?.name ?? "this student"}
                     />
                   ) : null}
                 </div>

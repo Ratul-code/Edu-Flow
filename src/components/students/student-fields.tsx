@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import type { BatchRecord } from "@/lib/data/batches"
 import type { ClassLevelRecord } from "@/lib/data/class-levels"
 import type { AcademicGroupRecord } from "@/lib/data/academic-groups"
+import type { MediumOptionRecord } from "@/lib/data/medium-options"
 import type { StudentRecord } from "@/lib/data/students"
 
 type StudentFieldsProps = {
@@ -29,6 +30,7 @@ type StudentFieldsProps = {
   defaultFeeStartMonth?: string
   errors?: Record<string, string | string[]>
   groupOptions?: AcademicGroupRecord[]
+  mediumOptions?: MediumOptionRecord[]
   showBatchAssignments?: boolean
   showFeeStartControls?: boolean
   student?: StudentRecord
@@ -42,6 +44,7 @@ export function StudentFields({
   defaultFeeStartMonth,
   errors,
   groupOptions = [],
+  mediumOptions = [],
   showBatchAssignments = true,
   showFeeStartControls = false,
   student,
@@ -103,35 +106,28 @@ export function StudentFields({
       </Field>
       <Field data-invalid={Boolean(errors?.class_level)}>
         <FieldLabel htmlFor="class_level">Class level</FieldLabel>
-        {tableExists && classLevels.length > 0 ? (
-          <Select defaultValue={student?.class_level ?? ""} name="class_level">
-            <SelectTrigger
-              aria-invalid={Boolean(errors?.class_level)}
-              className="h-8 w-full"
-              id="class_level"
-            >
-              <SelectValue placeholder="Not set" />
-            </SelectTrigger>
-            <SelectContent align="start">
-              <SelectGroup>
-                <SelectItem value="">Not set</SelectItem>
-                {classLevels.map((level) => (
-                  <SelectItem key={level.id} value={level.name}>
-                    {level.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        ) : (
-          <Input
-            id="class_level"
-            name="class_level"
+        <Select
+          defaultValue={student?.class_level ?? ""}
+          disabled={!tableExists || classLevels.length === 0}
+          name="class_level"
+        >
+          <SelectTrigger
             aria-invalid={Boolean(errors?.class_level)}
-            defaultValue={student?.class_level ?? ""}
-            placeholder="Class 9"
-          />
-        )}
+            className="h-8 w-full"
+            id="class_level"
+          >
+            <SelectValue placeholder="Select class" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              {classLevels.map((level) => (
+                <SelectItem key={level.id} value={level.name}>
+                  {level.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <FieldError>{fieldError(errors?.class_level)}</FieldError>
       </Field>
       <Field data-invalid={Boolean(errors?.admission_date)}>
@@ -160,9 +156,11 @@ export function StudentFields({
           <SelectContent align="start">
             <SelectGroup>
               <SelectItem value="">Not set</SelectItem>
-              <SelectItem value="Bangla Medium">Bangla Medium</SelectItem>
-              <SelectItem value="English Version">English Version</SelectItem>
-              <SelectItem value="English Medium">English Medium</SelectItem>
+              {mediumOptions.map((option) => (
+                <SelectItem key={option.id} value={option.name}>
+                  {option.name}
+                </SelectItem>
+              ))}
             </SelectGroup>
           </SelectContent>
         </Select>

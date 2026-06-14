@@ -13,7 +13,16 @@ export type Page =
   | "teachers"
   | "teacher-detail"
   | "schedule"
-  | "notifications"
+  | "comm-overview"
+  | "comm-sms"
+  | "comm-campaigns"
+  | "comm-templates"
+  | "comm-automations"
+  | "comm-automations-new"
+  | "comm-automations-detail"
+  | "comm-automations-edit"
+  | "comm-logs"
+  | "comm-settings"
   | "settings"
 
 type NavContextValue = {

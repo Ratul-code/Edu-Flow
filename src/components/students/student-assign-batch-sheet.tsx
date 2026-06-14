@@ -3,13 +3,15 @@
 import { BookOpenIcon, SearchIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import {
+  FeeTimingActionForm,
+  FeeTimingPendingOverlay,
+} from "@/components/app/fee-timing-action-form"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -50,6 +52,8 @@ export function StudentAssignBatchSheet({
   const [groupName, setGroupName] = useState("")
   const [selectedBatchId, setSelectedBatchId] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [isLedgerPending, setIsLedgerPending] = useState(false)
   const assigned = useMemo(() => new Set(assignedBatchIds), [assignedBatchIds])
   const availableBatches = useMemo(
     () => batches.filter((batch) => !assigned.has(batch.id)),
@@ -79,7 +83,7 @@ export function StudentAssignBatchSheet({
   })
 
   return (
-    <Sheet>
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger
         render={
           <Button className="gap-1.5 text-xs" size="sm" type="button" variant="outline" />
@@ -186,22 +190,21 @@ export function StudentAssignBatchSheet({
               assigning the batch.
             </DialogDescription>
           </DialogHeader>
-          <form action={action}>
+          <FeeTimingActionForm
+            action={action}
+            onPendingChange={setIsLedgerPending}
+            onSubmitStart={() => {
+              setConfirmOpen(false)
+              setSheetOpen(false)
+            }}
+            successMessage="The batch was assigned and fee ledgers were updated."
+            successTitle="Batch assigned"
+          >
             <input name="batch_id" type="hidden" value={selectedBatchId} />
-            <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>
-                Discard
-              </DialogClose>
-              <Button name="fee_start_option" type="submit" value="next" variant="outline">
-                Next month
-              </Button>
-              <Button name="fee_start_option" type="submit" value="current">
-                This month
-              </Button>
-            </DialogFooter>
-          </form>
+          </FeeTimingActionForm>
         </DialogContent>
       </Dialog>
+      {isLedgerPending ? <FeeTimingPendingOverlay /> : null}
     </Sheet>
   )
 }

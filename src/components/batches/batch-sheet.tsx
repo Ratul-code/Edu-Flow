@@ -23,7 +23,7 @@ export function BatchCreateSheet() {
         <PlusIcon data-icon="inline-start" />
         Create Batch
       </SheetTrigger>
-      <SheetContent className="gap-0 sm:max-w-xl">
+      <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:!w-[92vw] data-[side=right]:!max-w-3xl">
         <SheetHeader>
           <SheetTitle>Create batch</SheetTitle>
           <SheetDescription>
@@ -61,7 +61,7 @@ export function BatchEditSheet({
           </>
         )}
       </SheetTrigger>
-      <SheetContent className="gap-0 sm:max-w-xl">
+      <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:!w-[92vw] data-[side=right]:!max-w-3xl">
         <SheetHeader>
           <SheetTitle>Edit batch</SheetTitle>
           <SheetDescription>

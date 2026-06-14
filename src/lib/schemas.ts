@@ -70,6 +70,39 @@ const signedNumber = z
   })
   .pipe(z.number("Enter a valid amount."));
 
+const checkboxBoolean = z
+  .union([z.literal("on"), z.literal("true"), z.literal("1")])
+  .optional()
+  .transform(Boolean);
+
+const optionalUuid = z.string().uuid("Invalid option.").optional().or(z.literal(""));
+
+const requiredPositiveInteger = (fieldName: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${fieldName} is required.`)
+    .transform((value) => Number(value))
+    .pipe(
+      z
+        .number(`Enter a valid ${fieldName.toLowerCase()}.`)
+        .int(`${fieldName} must be a whole number.`)
+        .positive(`${fieldName} must be greater than zero.`)
+    );
+
+const requiredNonNegativeInteger = (fieldName: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${fieldName} is required.`)
+    .transform((value) => Number(value))
+    .pipe(
+      z
+        .number(`Enter a valid ${fieldName.toLowerCase()}.`)
+        .int(`${fieldName} must be a whole number.`)
+        .min(0, `${fieldName} cannot be less than zero.`)
+    );
+
 export type FormState = {
   errors?: Record<string, string | string[]>;
   message?: string;
@@ -223,24 +256,56 @@ export const billingSettingsSchema = z.object({
 });
 
 export const tenantProfileSchema = z.object({
-  address: optionalText(500, "Address is too long."),
-  contact_phone: optionalText(20, "Contact phone is too long."),
-  email: optionalText(100, "Email is too long.")
-    .refine((value) => !value || z.string().email().safeParse(value).success, {
-      message: "Enter a valid email address.",
-    }),
+  address: requiredText("Address", 500, "Address is too long."),
+  contact_phone: requiredText("Phone", 20, "Contact phone is too long."),
+  email: requiredText("Email", 100, "Email is too long.").email(
+    "Enter a valid email address."
+  ),
   name: requiredText("Center name", 100, "Center name is too long."),
   secondary_phone: optionalText(20, "Secondary phone is too long."),
+});
+
+export const adminProfileSchema = z.object({
+  name: requiredText("Name", 100, "Name is too long."),
+  phone: optionalText(20, "Phone number is too long."),
 });
 
 export const academicGroupSchema = z.object({
   name: requiredText("Group name", 50, "Group name is too long."),
 });
 
+export const mediumOptionSchema = z.object({
+  name: requiredText("Medium name", 50, "Medium name is too long."),
+});
+
 export const teacherPaymentSettingsSchema = z.object({
   payment_system: z.enum(["prepaid", "postpaid"], {
     error: "Select prepaid or postpaid payment.",
   }),
+  payment_start_day: z
+    .string()
+    .trim()
+    .min(1, "Payment start day is required.")
+    .transform((value) => Number(value))
+    .pipe(
+      z
+        .number("Enter a valid payment start day.")
+        .int("Payment start day must be a whole number.")
+        .min(1, "Payment start day must be at least 1.")
+        .max(15, "Payment start day cannot be after day 15.")
+    ),
+  grace_period_days: z
+    .string()
+    .trim()
+    .min(1, "Grace period is required.")
+    .transform((value) => Number(value))
+    .pipe(
+      z
+        .number("Enter a valid grace period.")
+        .int("Grace period must be a whole number.")
+        .min(0, "Grace period cannot be less than 0 days.")
+        .max(15, "Grace period cannot be more than 15 days.")
+    ),
 });
 
 export const feePaymentSchema = z.object({
@@ -253,6 +318,47 @@ export const feePaymentSchema = z.object({
 });
 
 export const salaryPaymentSchema = feePaymentSchema;
+
+const smsRecipientType = z.enum(["student", "guardian", "both"], {
+  error: "Select a valid recipient.",
+});
+
+export const tenantSmsSettingsSchema = z.object({
+  default_recipient_type: smsRecipientType,
+  grace_period_days_after_due: requiredNonNegativeInteger("Grace period days"),
+  grace_period_enabled: checkboxBoolean,
+  grace_period_recipient: smsRecipientType,
+  grace_period_template_id: optionalUuid,
+  max_automated_segments: requiredPositiveInteger("Max automated segments"),
+  max_bulk_recipients: requiredPositiveInteger("Max bulk recipients"),
+  max_bulk_segments: requiredPositiveInteger("Max bulk segments"),
+  max_single_sms_segments: requiredPositiveInteger("Max single SMS segments"),
+  overdue_warning_days_before_overdue: requiredNonNegativeInteger(
+    "Overdue warning days"
+  ),
+  overdue_warning_enabled: checkboxBoolean,
+  overdue_warning_recipient: smsRecipientType,
+  overdue_warning_template_id: optionalUuid,
+  payment_confirmation_enabled: checkboxBoolean,
+  payment_confirmation_recipient: smsRecipientType,
+  payment_confirmation_template_id: optionalUuid,
+  payment_reminder_days_before_due: requiredNonNegativeInteger(
+    "Reminder days"
+  ),
+  payment_reminder_enabled: checkboxBoolean,
+  payment_reminder_recipient: smsRecipientType,
+  payment_reminder_template_id: optionalUuid,
+  sms_signature: optionalText(160, "SMS signature is too long."),
+});
+
+export const smsRechargeRequestSchema = z.object({
+  package_id: z.string().uuid("Select a package."),
+  payment_method: z.enum(["bkash", "nagad", "bank", "cash", "other"], {
+    error: "Select a payment method.",
+  }),
+  payment_note: optionalText(500, "Payment note is too long."),
+  transaction_id: optionalText(100, "Transaction ID is too long."),
+});
 
 export const salaryLedgerSchema = z.object({
   expected_salary: nonNegativeNumber("Expected salary must be 0 or more."),

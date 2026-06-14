@@ -25,6 +25,7 @@ import {
 import type { BatchRecord } from "@/lib/data/batches"
 import type { ClassLevelRecord } from "@/lib/data/class-levels"
 import type { AcademicGroupRecord } from "@/lib/data/academic-groups"
+import type { MediumOptionRecord } from "@/lib/data/medium-options"
 import type { StudentRecord } from "@/lib/data/students"
 
 type StudentEditSheetClientProps = {
@@ -33,6 +34,7 @@ type StudentEditSheetClientProps = {
   batches: BatchRecord[]
   classLevels: ClassLevelRecord[]
   groupOptions: AcademicGroupRecord[]
+  mediumOptions: MediumOptionRecord[]
   returnPath?: string
   student: StudentRecord
   tableExists: boolean
@@ -46,6 +48,7 @@ export function StudentEditSheetClient({
   batches,
   classLevels,
   groupOptions,
+  mediumOptions,
   returnPath,
   student,
   tableExists,
@@ -122,6 +125,7 @@ export function StudentEditSheetClient({
                 batches={batches}
                 classLevels={classLevels}
                 groupOptions={groupOptions}
+                mediumOptions={mediumOptions}
                 showBatchAssignments={false}
                 student={student}
                 tableExists={tableExists}

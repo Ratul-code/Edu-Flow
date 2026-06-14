@@ -1,12 +1,12 @@
 -- Schedule the generate-monthly-ledgers Edge Function.
--- Replace PROJECT_REF and CRON_SECRET_VALUE before running this in Supabase SQL editor.
+-- Replace PROJECT_URL and CRON_SECRET_VALUE before running this in Supabase SQL editor.
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
-create extension if not exists vault;
+create extension if not exists supabase_vault cascade;
 
 select vault.create_secret(
-  'https://PROJECT_REF.supabase.co',
+  'PROJECT_URL',
   'project_url'
 )
 where not exists (

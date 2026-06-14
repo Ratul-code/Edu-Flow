@@ -2,6 +2,7 @@ import type { BatchRecord } from "@/lib/data/batches"
 import { BatchFormClient } from "@/components/batches/batch-form-client"
 import { requireAdminContext } from "@/lib/auth/user"
 import { listAcademicGroups } from "@/lib/data/academic-groups"
+import { listMediumOptions } from "@/lib/data/medium-options"
 import {
   checkClassLevelsTableExists,
   listClassLevels,
@@ -16,9 +17,10 @@ type BatchFormProps = {
 export async function BatchForm({ action, batch, submitLabel }: BatchFormProps) {
   const admin = await requireAdminContext()
   const tableExists = await checkClassLevelsTableExists()
-  const [classLevels, academicGroups] = await Promise.all([
+  const [classLevels, academicGroups, mediumOptions] = await Promise.all([
     tableExists ? listClassLevels(admin.tenantId) : Promise.resolve([]),
     listAcademicGroups(admin.tenantId),
+    listMediumOptions(admin.tenantId),
   ])
 
   return (
@@ -27,6 +29,7 @@ export async function BatchForm({ action, batch, submitLabel }: BatchFormProps) 
       action={action}
       batch={batch}
       classLevels={classLevels}
+      mediumOptions={mediumOptions}
       submitLabel={submitLabel}
       tableExists={tableExists}
     />

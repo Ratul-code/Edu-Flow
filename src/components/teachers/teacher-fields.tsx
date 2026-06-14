@@ -1,5 +1,6 @@
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { TagInput } from "@/components/ui/tag-input"
 import {
   Select,
   SelectContent,
@@ -43,14 +44,11 @@ export function TeacherFields({ errors, teacher }: TeacherFieldsProps) {
         <FieldError>{fieldError(errors?.phone)}</FieldError>
       </Field>
       <Field data-invalid={Boolean(errors?.subject_specialty)}>
-        <FieldLabel htmlFor="subject_specialty">Subject specialty</FieldLabel>
-        <Input
-          id="subject_specialty"
+        <FieldLabel>Subject specialty</FieldLabel>
+        <TagInput
+          defaultTags={tagsFromText(teacher?.subject_specialty)}
           name="subject_specialty"
-          aria-invalid={Boolean(errors?.subject_specialty)}
-          defaultValue={teacher?.subject_specialty ?? ""}
-          placeholder="Math"
-          required
+          placeholder="Type a subject and press Space to add..."
         />
         <FieldError>{fieldError(errors?.subject_specialty)}</FieldError>
       </Field>
@@ -111,4 +109,11 @@ export function TeacherFields({ errors, teacher }: TeacherFieldsProps) {
 
 function fieldError(error: string | string[] | undefined) {
   return Array.isArray(error) ? error.join(" ") : error
+}
+
+function tagsFromText(value: string | null | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
 }

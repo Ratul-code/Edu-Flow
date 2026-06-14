@@ -1,34 +1,21 @@
-"use client"
-
-import { Building2Icon, PencilIcon, SaveIcon } from "lucide-react"
-import { useState } from "react"
+import { Building2Icon, SaveIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { Textarea } from "@/components/ui/textarea"
 import { updateTenantProfile } from "@/lib/actions/settings"
 
 type CenterProfile = {
   address: string | null
   contact_phone: string | null
   email: string | null
+  logo_url: string | null
   name: string
   secondary_phone: string | null
 }
@@ -38,126 +25,125 @@ type CenterProfileCardProps = {
 }
 
 export function CenterProfileCard({ tenant }: CenterProfileCardProps) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <Card className="h-fit">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Building2Icon className="size-5 text-primary" />
-          <CardTitle>Centre Profile</CardTitle>
-        </div>
-        <CardDescription>
-          Contact details shown across the coaching workspace.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <Detail label="Centre name" value={tenant.name} />
-        <Detail label="Contact phone" value={tenant.contact_phone} />
-        <Detail label="Secondary phone" value={tenant.secondary_phone} />
-        <Detail label="Email" value={tenant.email} />
-        <Detail label="Full address" value={tenant.address} multiline />
-
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger render={<Button className="mt-2 w-full" type="button" />}>
-            <PencilIcon data-icon="inline-start" />
-            Edit Centre Profile
-          </SheetTrigger>
-          <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:!w-[92vw] data-[side=right]:!max-w-2xl">
-            <form action={updateTenantProfile} className="flex min-h-0 flex-1 flex-col">
-              <SheetHeader className="border-b px-6 py-5">
-                <SheetTitle>Edit Centre Profile</SheetTitle>
-                <SheetDescription>
-                  Update the centre name, contact information, and full address.
-                </SheetDescription>
-              </SheetHeader>
-              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="center-name">Centre name</FieldLabel>
-                    <Input
-                      defaultValue={tenant.name}
-                      id="center-name"
-                      name="name"
-                      required
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="center-contact-phone">Contact phone</FieldLabel>
-                    <Input
-                      defaultValue={tenant.contact_phone ?? ""}
-                      id="center-contact-phone"
-                      name="contact_phone"
-                      type="tel"
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="center-secondary-phone">
-                      Secondary phone
-                    </FieldLabel>
-                    <Input
-                      defaultValue={tenant.secondary_phone ?? ""}
-                      id="center-secondary-phone"
-                      name="secondary_phone"
-                      type="tel"
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="center-email">Email</FieldLabel>
-                    <Input
-                      defaultValue={tenant.email ?? ""}
-                      id="center-email"
-                      name="email"
-                      type="email"
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="center-address">Full address</FieldLabel>
-                    <Textarea
-                      defaultValue={tenant.address ?? ""}
-                      id="center-address"
-                      name="address"
-                      rows={4}
-                    />
-                  </Field>
-                </FieldGroup>
+    <form action={updateTenantProfile} encType="multipart/form-data">
+      <Card className="gap-4 py-5">
+        <CardHeader className="px-5 pb-0 pt-0">
+          <div className="flex items-center gap-2">
+            <Building2Icon className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold">Center Profile</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 px-5 pt-2">
+          <div className="flex items-center gap-4">
+            {tenant.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt={`${tenant.name} logo`}
+                className="size-14 rounded-xl border object-cover"
+                src={tenant.logo_url}
+              />
+            ) : (
+              <div className="flex size-14 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground">
+                {initialsFor(tenant.name)}
               </div>
-              <SheetFooter className="border-t bg-muted/20 px-6 py-4 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <SaveIcon data-icon="inline-start" />
-                  Save profile
-                </Button>
-              </SheetFooter>
-            </form>
-          </SheetContent>
-        </Sheet>
-      </CardContent>
-    </Card>
+            )}
+            <div>
+              <p className="text-sm font-medium">{tenant.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {tenant.logo_url ? "Custom logo" : "Default initials logo"}
+              </p>
+              <label
+                className="mt-1.5 inline-flex h-6 cursor-pointer items-center justify-center gap-1 rounded-md border bg-background px-2 text-xs font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground"
+                htmlFor="center-logo"
+              >
+                Change Logo
+              </label>
+              <Input
+                accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                className="sr-only"
+                id="center-logo"
+                name="logo"
+                type="file"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <Field className="gap-1.5">
+              <FieldLabel className="text-xs font-medium" htmlFor="center-name">
+                Center Name
+              </FieldLabel>
+              <Input
+                className="h-8 text-sm"
+                defaultValue={tenant.name}
+                id="center-name"
+                name="name"
+                required
+              />
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel className="text-xs font-medium" htmlFor="center-address">
+                Address
+              </FieldLabel>
+              <Input
+                className="h-8 text-sm"
+                defaultValue={tenant.address ?? ""}
+                id="center-address"
+                name="address"
+                required
+              />
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel className="text-xs font-medium" htmlFor="center-phone">
+                Phone
+              </FieldLabel>
+              <Input
+                className="h-8 text-sm"
+                defaultValue={tenant.contact_phone ?? ""}
+                id="center-phone"
+                name="contact_phone"
+                required
+                type="tel"
+              />
+            </Field>
+            <input
+              name="secondary_phone"
+              type="hidden"
+              value={tenant.secondary_phone ?? ""}
+            />
+            <Field className="gap-1.5">
+              <FieldLabel className="text-xs font-medium" htmlFor="center-email">
+                Email
+              </FieldLabel>
+              <Input
+                className="h-8 text-sm"
+                defaultValue={tenant.email ?? ""}
+                id="center-email"
+                name="email"
+                required
+                type="email"
+              />
+            </Field>
+          </div>
+
+          <Button className="w-full gap-1.5" size="sm" type="submit">
+            <SaveIcon className="size-3.5" />
+            Save Profile
+          </Button>
+        </CardContent>
+      </Card>
+    </form>
   )
 }
 
-function Detail({
-  label,
-  multiline = false,
-  value,
-}: {
-  label: string
-  multiline?: boolean
-  value: string | null
-}) {
-  return (
-    <div>
-      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {label}
-      </span>
-      <p
-        className={`mt-0.5 text-sm text-foreground ${multiline ? "whitespace-pre-line" : ""}`}
-      >
-        {value || "Not configured"}
-      </p>
-    </div>
-  )
+function initialsFor(value: string) {
+  const initials = value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("")
+
+  return initials || "EF"
 }

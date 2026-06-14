@@ -10,6 +10,11 @@ import {
   ChevronDown,
   ChevronRight,
   Zap,
+  MessageSquare,
+  Megaphone,
+  FileText,
+  ScrollText,
+  Settings2,
 } from "lucide-react"
 import * as React from "react"
 import {
@@ -30,7 +35,6 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { type Page, useNav } from "@/nav-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 
 const navItems: {
   label: string
@@ -51,8 +55,26 @@ const navItems: {
   },
   { label: "Teachers", page: "teachers", icon: GraduationCap },
   { label: "Schedule", page: "schedule", icon: Bell },
-  { label: "Notifications", page: "notifications", icon: Bell },
+  {
+    label: "Communication",
+    icon: MessageSquare,
+    children: [
+      { label: "Overview", page: "comm-overview", icon: LayoutDashboard },
+      { label: "SMS Channel", page: "comm-sms", icon: MessageSquare },
+      { label: "Campaigns", page: "comm-campaigns", icon: Megaphone },
+      { label: "Templates", page: "comm-templates", icon: FileText },
+      { label: "Automations", page: "comm-automations", icon: Zap },
+      { label: "Logs", page: "comm-logs", icon: ScrollText },
+      { label: "Settings", page: "comm-settings", icon: Settings2 },
+    ],
+  },
   { label: "Settings", page: "settings", icon: Settings },
+]
+
+const commPages: Page[] = [
+  "comm-overview", "comm-sms", "comm-campaigns", "comm-templates",
+  "comm-automations", "comm-automations-new", "comm-automations-detail",
+  "comm-automations-edit", "comm-logs", "comm-settings",
 ]
 
 export function AppSidebar() {
@@ -60,6 +82,7 @@ export function AppSidebar() {
   const [feesOpen, setFeesOpen] = React.useState(
     currentPage === "fees" || currentPage === "salaries" || currentPage === "student-payment" || currentPage === "salary-payment"
   )
+  const [commOpen, setCommOpen] = React.useState(commPages.includes(currentPage))
 
   const isActive = (page: Page) => {
     if (page === "students") return currentPage === "students" || currentPage === "student-detail"
@@ -67,6 +90,7 @@ export function AppSidebar() {
     if (page === "teachers") return currentPage === "teachers" || currentPage === "teacher-detail"
     if (page === "fees") return currentPage === "fees" || currentPage === "student-payment"
     if (page === "salaries") return currentPage === "salaries" || currentPage === "salary-payment"
+    if (page === "comm-automations") return currentPage === "comm-automations" || currentPage === "comm-automations-new" || currentPage === "comm-automations-detail" || currentPage === "comm-automations-edit"
     return currentPage === page
   }
 
@@ -99,8 +123,10 @@ export function AppSidebar() {
             <SidebarMenu className="gap-0.5">
               {navItems.map((item) => {
                 if (item.children) {
+                  const isOpen = item.label === "Fees & Salaries" ? feesOpen : commOpen
+                  const setOpen = item.label === "Fees & Salaries" ? setFeesOpen : setCommOpen
                   return (
-                    <Collapsible key={item.label} open={feesOpen} onOpenChange={setFeesOpen}>
+                    <Collapsible key={item.label} open={isOpen} onOpenChange={setOpen}>
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
@@ -143,9 +169,6 @@ export function AppSidebar() {
                     >
                       <item.icon />
                       <span>{item.label}</span>
-                      {item.page === "notifications" && (
-                        <Badge className="ml-auto h-4 px-1.5 text-[10px]">3</Badge>
-                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )

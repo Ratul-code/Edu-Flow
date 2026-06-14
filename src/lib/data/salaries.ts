@@ -1,6 +1,7 @@
 import { monthStart } from "@/lib/data/fees"
 import {
   getTeacherPaymentSettings,
+  teacherSalaryGraceEndDate,
   teacherSalaryPaymentStartDate,
 } from "@/lib/data/teacher-payment-settings"
 import { createClient } from "@/lib/supabase/server"
@@ -24,6 +25,7 @@ export type TeacherSalaryLedgerRecord = {
   paid_amount: number | string
   due_amount: number | string
   status: SalaryLedgerStatus
+  grace_end_date: string
   payment_start_date: string
   generated_at: string
   created_at: string
@@ -57,6 +59,7 @@ const salaryLedgerSelect = `
   paid_amount,
   due_amount,
   status,
+  grace_end_date,
   payment_start_date,
   generated_at,
   created_at,
@@ -71,6 +74,7 @@ const salaryLedgerSelect = `
 
 type TeacherSalaryLedgerPreparation = {
   opened: boolean
+  grace_end_date: string
   payment_start_date: string
   payment_system: "prepaid" | "postpaid"
 }
@@ -95,9 +99,11 @@ export async function ensureTeacherSalaryLedgers(
     normalizedMonth,
     settings
   )
+  const graceEndDate = teacherSalaryGraceEndDate(paymentStartDate, settings)
 
   if (today() < paymentStartDate) {
     return {
+      grace_end_date: graceEndDate,
       opened: false,
       payment_start_date: paymentStartDate,
       payment_system: settings.payment_system,
@@ -120,6 +126,7 @@ export async function ensureTeacherSalaryLedgers(
 
   if (teachersError || error) {
     return {
+      grace_end_date: graceEndDate,
       opened: true,
       payment_start_date: paymentStartDate,
       payment_system: settings.payment_system,
@@ -145,6 +152,7 @@ export async function ensureTeacherSalaryLedgers(
         adjustment_amount: 0,
         paid_amount: 0,
         due_amount: dueAmount,
+        grace_end_date: graceEndDate,
         status: salaryStatus(expectedSalary, 0, dueAmount),
         payment_start_date: paymentStartDate,
         generated_at: new Date().toISOString(),
@@ -156,6 +164,7 @@ export async function ensureTeacherSalaryLedgers(
   }
 
   return {
+    grace_end_date: graceEndDate,
     opened: true,
     payment_start_date: paymentStartDate,
     payment_system: settings.payment_system,

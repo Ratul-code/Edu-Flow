@@ -6,6 +6,7 @@ import { BatchEditSheet } from "@/components/batches/batch-sheet"
 import { archiveBatch } from "@/lib/actions/batches"
 import type { BatchRecord } from "@/lib/data/batches"
 import { StatusBadge } from "@/components/app/status-badge"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -57,8 +58,8 @@ export function BatchesTable({
                 {batch.name}
               </Link>
             </TableCell>
-            <TableCell className="max-w-[160px] truncate py-3 text-sm text-muted-foreground">
-              {batch.subject || "-"}
+            <TableCell className="max-w-[220px] py-3 text-sm">
+              <SubjectBadges value={batch.subject} />
             </TableCell>
             <TableCell className="py-3 text-sm">{batch.class_level || "-"}</TableCell>
             <TableCell className="py-3 text-sm">{batch.medium || "-"}</TableCell>
@@ -129,4 +130,29 @@ export function BatchesTable({
 
 function formatTaka(value: number | string) {
   return `৳${Number(value).toLocaleString("en-BD")}`
+}
+
+function SubjectBadges({ value }: { value: string | null }) {
+  const subjects = tagsFromText(value)
+
+  if (!subjects.length) {
+    return <span className="text-muted-foreground">-</span>
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {subjects.map((subject) => (
+        <Badge key={subject} variant="outline">
+          {subject}
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
+function tagsFromText(value: string | null | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
 }

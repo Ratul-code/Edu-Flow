@@ -20,6 +20,7 @@ import {
   listClassLevels,
 } from "@/lib/data/class-levels"
 import { listAcademicGroups } from "@/lib/data/academic-groups"
+import { listMediumOptions } from "@/lib/data/medium-options"
 import type { StudentRecord } from "@/lib/data/students"
 import { currentMonthStart, monthInputValue } from "@/lib/data/fees"
 import type { FormState } from "@/lib/schemas"
@@ -52,7 +53,10 @@ export async function StudentForm({
   title,
 }: StudentFormProps) {
   const { classLevels, tableExists } = await getClassLevelOptions()
-  const academicGroups = await getAcademicGroups()
+  const [academicGroups, mediumOptions] = await Promise.all([
+    getAcademicGroups(),
+    getMediumOptions(),
+  ])
 
   return (
     <form action={action}>
@@ -69,6 +73,7 @@ export async function StudentForm({
             batches={batches}
             classLevels={classLevels}
             groupOptions={academicGroups}
+            mediumOptions={mediumOptions}
             student={student}
             tableExists={tableExists}
           />
@@ -92,7 +97,10 @@ export async function StudentCreateSheet({
   triggerVariant,
 }: StudentCreateSheetProps) {
   const { classLevels, tableExists } = await getClassLevelOptions()
-  const academicGroups = await getAcademicGroups()
+  const [academicGroups, mediumOptions] = await Promise.all([
+    getAcademicGroups(),
+    getMediumOptions(),
+  ])
 
   return (
     <StudentCreateSheetClient
@@ -101,6 +109,7 @@ export async function StudentCreateSheet({
       classLevels={classLevels}
       defaultFeeStartMonth={monthInputValue(currentMonthStart())}
       groupOptions={academicGroups}
+      mediumOptions={mediumOptions}
       tableExists={tableExists}
       triggerClassName={triggerClassName}
       triggerLabel={triggerLabel}
@@ -127,7 +136,10 @@ export async function StudentEditSheet({
   triggerSize?: "default" | "icon-sm"
 }) {
   const { classLevels, tableExists } = await getClassLevelOptions()
-  const academicGroups = await getAcademicGroups()
+  const [academicGroups, mediumOptions] = await Promise.all([
+    getAcademicGroups(),
+    getMediumOptions(),
+  ])
 
   return (
     <StudentEditSheetClient
@@ -136,6 +148,7 @@ export async function StudentEditSheet({
       batches={batches}
       classLevels={classLevels}
       groupOptions={academicGroups}
+      mediumOptions={mediumOptions}
       returnPath={returnPath}
       student={student}
       tableExists={tableExists}
@@ -157,4 +170,10 @@ async function getAcademicGroups() {
   const admin = await requireAdminContext()
 
   return listAcademicGroups(admin.tenantId)
+}
+
+async function getMediumOptions() {
+  const admin = await requireAdminContext()
+
+  return listMediumOptions(admin.tenantId)
 }

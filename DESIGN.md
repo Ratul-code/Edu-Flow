@@ -2,124 +2,282 @@
 
 ## Project Design Goal
 
-Match the `ui-reference/` admin dashboard visually while keeping the production app as the source of truth for data, routing, auth, permissions, validation, mutations, loading states, and error handling. The UI should feel compact, neutral, and operational: clear tables, quiet cards, efficient filters, and restrained teal emphasis.
+Edu Flow is an operational admin dashboard for coaching-center management. The UI should feel compact, calm, and work-focused: fast-scanning tables, clear filters, restrained cards, practical dialogs/sheets, and a consistent teal primary accent.
 
-## Color Palette
+Use `ui-reference/` as the visual/design source of truth only. The production app remains the source of truth for data, routing, auth, permissions, validation, mutations, loading states, and error handling.
 
-- Background: `oklch(0.98 0 0)` for the app canvas.
-- Surface/card/popover: `oklch(1 0 0)`.
-- Foreground: `oklch(0.145 0 0)`.
-- Muted: `oklch(0.93 0 0)` with muted text `oklch(0.5 0 0)`.
-- Border/input: `oklch(0.93 0 0)`.
-- Primary teal: `oklch(0.42 0.14 170)`.
-- Accent teal: `oklch(0.65 0.12 170)`.
-- Success: `oklch(0.527 0.154 150.069)`.
-- Warning: `oklch(0.769 0.188 70.08)`.
-- Info: primary teal.
-- Destructive: `oklch(0.577 0.245 27.325)`.
+## Visual Personality
+
+- Dense enough for daily admin work, but not cramped.
+- Neutral surfaces with teal as the main product/action color.
+- Small, readable typography with clear hierarchy.
+- Minimal decoration; use icons, status colors, spacing, and borders to create structure.
+- Avoid marketing-style heroes, oversized cards, mock visuals, and decorative gradients.
+
+## Color Tokens
+
+Defined in `src/app/globals.css`.
+
+- App background: `--background: oklch(0.98 0 0)`.
+- Main text: `--foreground: oklch(0.145 0 0)`.
+- Card/popover surface: `--card` and `--popover: oklch(1 0 0)`.
+- Muted surface: `--muted: oklch(0.93 0 0)`.
+- Muted text: `--muted-foreground: oklch(0.5 0 0)`.
+- Border/input: `--border` and `--input: oklch(0.93 0 0)`.
+- Primary teal: `--primary: oklch(0.42 0.14 170)`.
+- Accent teal: `--accent: oklch(0.65 0.12 170)`.
+- Secondary: pale blue/teal surface with teal text.
+- Success: green token, used for active/paid/positive values.
+- Warning: amber token, used for due states.
+- Destructive: red token, used for archive/overdue/failure/danger.
+- Info: teal token, used for partial/progress/informational states.
+
+Dark-mode tokens exist, but the current product styling is primarily optimized around the light operational dashboard.
 
 ## Typography
 
-- Use the app font tokens from Next/Geist.
+- Font: Geist Sans through `--font-sans`; Geist Mono through `--font-mono`.
 - Page titles: `text-2xl font-semibold tracking-tight`.
-- Page subtitles: `mt-0.5 text-sm text-muted-foreground`.
-- Headline badges and status badges: `inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium`; icons inside badges are `size-3`.
-- Card titles: compact `text-sm font-semibold`; card descriptions are `text-xs text-muted-foreground`.
-- Summary card labels: `text-xs text-muted-foreground`; values are `text-xl font-bold tracking-tight`.
-- Buttons: base text is `text-sm font-medium`; `xs` buttons use `text-xs`.
-- Table headers: `text-xs font-medium`.
-- Table body: `text-sm`, with secondary row metadata in `text-xs text-muted-foreground`.
+- Detail page titles: `text-xl font-semibold tracking-tight` when paired with an avatar/header cluster.
+- Page descriptions: `mt-0.5 text-sm text-muted-foreground`.
+- Card titles: usually `text-sm font-semibold`.
+- Card descriptions: usually `text-xs text-muted-foreground` in dense dashboard/list contexts.
+- Metric values: `text-2xl font-bold tracking-tight`.
+- Table headers: `h-9 text-xs font-medium`.
+- Table body: `text-sm`, with secondary metadata as `text-xs text-muted-foreground`.
+- Badges and small controls: `text-xs font-medium`.
 
-## Spacing Scale
+Do not scale fonts with viewport width. Keep letter spacing normal except the existing `tracking-tight` on headings and `tracking-wide uppercase` on metric labels.
 
-- Page padding: `p-4 md:p-6`.
-- Page vertical rhythm: `space-y-5` or `space-y-6`.
-- Cards: default `py-6 px-6`; operational cards may use `py-0 gap-0`.
-- Filter bars: `px-4 py-3`.
-- Table cells: compact `p-2`, domain rows may use `py-2.5` to `py-3`.
-- Control gaps: `gap-1.5` to `gap-3`.
+## Radius, Borders, Shadows
 
-## Border Radius
-
-- Base radius: `0.625rem`.
+- Base radius: `--radius: 0.625rem`.
 - Buttons and inputs: `rounded-md`.
-- Cards and main panels: `rounded-xl`.
-- Badges: `rounded-full`.
+- Cards: `rounded-xl`.
+- Metric icon tiles: `rounded-lg`.
+- Badges/progress bars: `rounded-full`.
+- Cards use `border bg-card shadow-sm`.
+- Use borders and muted backgrounds for hierarchy; avoid heavy custom shadows.
 
-## Shadows
+## Layout
 
-- Cards use subtle `shadow-sm`.
-- Avoid heavy custom shadows and decorative elevation.
-- Menus/dialogs may rely on primitive defaults.
+### Authenticated Shell
 
-## Card Design
+- The app shell uses a collapsible left sidebar and sticky-looking topbar inside `SidebarProvider`.
+- Sidebar width: `--sidebar-width: 16rem`; icon width: `3rem`.
+- Main content scrolls inside `main` with `overflow-y-auto`.
+- Topbar height is compact (`h-14` convention).
 
-- Cards are white surfaces with a border and `shadow-sm`.
-- Dashboard metric cards use compact headers, small icon containers, and simple trend rows.
-- Table cards use `py-0 gap-0`, a bordered filter/header band, and `CardContent className="p-0"`.
+Reference files:
 
-## Table Design
+- `src/app/(app)/layout.tsx`
+- `src/components/app/app-sidebar.tsx`
+- `src/components/app/topbar.tsx`
 
-- Neutral table headers, not colored blocks.
-- Header rows are compact with `h-9` or `h-10`.
-- Rows use subtle borders and `hover:bg-muted/50`.
-- Primary identity cells may include avatar initials and secondary metadata.
-- Actions stay compact and right-aligned.
+### Page Canvas
 
-## Button Design
+- Standard page padding: `p-4 md:p-6`.
+- Standard vertical rhythm: `space-y-5` for list/detail pages and `space-y-6` for dashboard pages.
+- Page header and primary actions sit above cards, not inside the table card.
+- Use responsive flex headers: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between` when actions may wrap.
 
-- Default buttons are teal, compact, and `rounded-md`.
-- Button typography must stay `text-sm font-medium`; only `xs` uses `text-xs`.
-- `sm` is the standard page action size: `h-8 gap-1.5 px-3`.
-- `xs` is for tiny inline row affordances: `h-6 gap-1 px-2 text-xs`.
-- Icon buttons use `icon-sm` (`size-8`) for page actions and compact menus; dense table menus may use `icon-xs` (`size-6`) only where the reference table does.
-- Preserve the production `render` API for links and triggers.
+### Settings Pages
 
-## Form/Input Design
+- Settings use line-style tabs under the page header: General, Billing, Academic Setup, and Salary Setting.
+- Tab lists are full-width with a bottom border, square tab triggers, and a primary underline for the selected tab.
+- Settings cards follow the `ui-reference` density: `text-sm` titles, `text-xs` descriptions, compact controls, and `gap-4` responsive grids.
+- General contains the center profile form only. Billing contains tenant subscription status. Academic Setup uses three reference-style taxonomy cards. Salary Setting contains Student Payment and Teacher Payment settings.
+- Keep settings content operational. Do not copy mock account, payment-method, notification, or switch behavior unless the real app supports it.
 
-- Inputs are `h-9` by default; dense filters use `h-8`.
-- Search fields use a leading search icon and `pl-8`.
-- Selects in filter bars should match input height and compact density.
-- Keep existing validation schemas, form actions, dirty guards, and error behavior.
+### List Pages
 
-## Page Layout Patterns
+- Use a compact page header plus primary create/action button.
+- Main list surface is a single `Card className="gap-0 py-0"`.
+- Inside list cards, use `CardContent className="p-0"`.
+- Filter bars sit at the top of the card as `border-b px-4 py-3`.
+- Results render directly below filters, with an empty state in the same surface.
 
-- Authenticated app shell: compact sidebar, sticky `h-14` topbar, scrollable main content.
-- List pages: page header with title/subtext and primary action outside the table card; table cards should start with the compact filter band and avoid extra table titles/descriptions.
-- Detail pages: use the reference detail header with a `ghost sm` back button, avatar/name/status/tag cluster, and right-aligned `outline sm` actions; primary payment actions only appear when real due amounts exist.
-- Student profile pages: use a `lg:grid-cols-3` detail layout, compact `gap-4 py-5 px-5` cards, icon-led profile fields, guardian fields from the reference with blank values for missing schema fields, enrolled batch rows, reference fee-history table columns, and notes in a compact textarea block.
-- Batch create/edit: use right-side sheets instead of separate form pages. Batch name, class level, and subjects are required. If monthly fee changes, ask whether to apply ledger updates to this month or next month.
-- Receipts: preview and downloaded PDF must use the same professional structure: dark header, receipt metadata panel, student/billing info cards, bordered amount rows, green paid amount, red due amount, note, and signature line. Use real receipt/payment data only.
-- Dashboard: metric grid, progress/summary card when backed by real data, due-student table, quick-action grid, upcoming-classes table.
+Reference files:
 
-## Reusable Component List
+- `src/app/(app)/students/page.tsx`
+- `src/app/(app)/batches/page.tsx`
+- `src/app/(app)/fees/page.tsx`
+- `src/app/(app)/salaries/page.tsx`
 
-- Layout shell: `AppSidebar`, `Topbar`, authenticated layout.
-- Page header: `PageHeader`.
-- Summary cards: shared `Card` plus dashboard metric pattern.
-- Tables: `Table` primitives plus domain table components.
-- Filters/search: `SearchInput`, domain filter bars.
-- Buttons/actions: `Button`, table action buttons, dialogs/sheets.
-- Status: `StatusBadge`, `Badge`.
-- Empty/loading: existing `Empty` and `Skeleton` primitives styled with the same tokens.
+### Dashboard
+
+- Metric cards use `Card className="gap-3 py-5"`.
+- Metric card header/content padding is `px-5`.
+- Metric icons are `size-8 rounded-lg` containers with tone classes such as `bg-info/10 text-info`.
+- Dashboard sections use responsive grids: metrics in `sm:grid-cols-2 xl:grid-cols-4`; content in `lg:grid-cols-3`.
+- Progress bars use a muted rounded track and `bg-primary` fill.
+
+Reference file:
+
+- `src/app/(app)/dashboard/page.tsx`
+
+### Detail Pages
+
+- Detail headers use a ghost back button, avatar/name/status cluster, and right-aligned actions.
+- Detail content usually uses `grid grid-cols-1 gap-4 lg:grid-cols-3`.
+- Detail cards use `gap-4 py-5` with `px-5` header/content padding.
+- Use icon-led details for profile fields: small lucide icon, muted label, strong value.
+- Show payment CTAs only when real due ledgers exist.
+
+Reference files:
+
+- `src/app/(app)/students/[id]/page.tsx`
+- `src/app/(app)/teachers/[id]/page.tsx`
+- `src/app/(app)/batches/[id]/page.tsx`
+
+## Cards
+
+- Default primitive: `Card` is `flex flex-col gap-6 rounded-xl border bg-card py-6 shadow-sm`.
+- Dense operational cards override with `gap-3` or `gap-4` and `py-5`.
+- List/table cards override with `gap-0 py-0`.
+- Use `px-5` for dense cards and `px-6` for default cards.
+- Do not nest cards inside cards.
+- Do not turn page sections into decorative floating cards unless the section is a real repeated item, modal, or framed tool.
+
+## Buttons
+
+Button variants live in `src/components/ui/button.tsx`.
+
+- Default: teal primary action, `bg-primary text-primary-foreground`.
+- Outline: bordered neutral action, used for secondary commands and row actions.
+- Ghost: quiet navigation or inline command.
+- Destructive: danger/archive/delete actions.
+- Link: text link behavior.
+
+Button sizes:
+
+- `default`: `h-9 px-4`.
+- `sm`: `h-8 gap-1.5 px-3`; standard page/header action.
+- `xs`: `h-6 gap-1 px-2 text-xs`; dense table action.
+- `icon-sm`: `size-8`; compact icon action.
+- `icon-xs`: `size-6`; dense row/menu action only.
+
+Use lucide icons in action buttons when a recognizable icon exists. Mark inline icons with `data-icon="inline-start"` or `data-icon="inline-end"` when the primitive spacing expects it.
+
+## Tables
+
+- Use shared `Table` primitives.
+- Header rows are compact and neutral, not colored blocks.
+- Header cells commonly use `h-9 text-xs font-medium`; first column often gets `pl-4`.
+- Body rows use subtle borders and hover states from the primitive.
+- Primary identity cells come first and may include a `size-6` avatar with initials.
+- Money columns are right-aligned.
+- Row metadata uses `text-xs text-muted-foreground`.
+- Row actions are right-aligned in `flex items-center justify-end gap-1`.
+- Use `xs` buttons for row actions.
+- Use `StatusBadge` for statuses.
+
+Reference files:
+
+- `src/components/students/students-table.tsx`
+- `src/components/teachers/teachers-table.tsx`
+- `src/components/batches/batches-table.tsx`
+- `src/components/fees/fee-ledgers-table.tsx`
+- `src/components/salaries/salary-ledgers-table.tsx`
+
+## Badges And Status
+
+- Use `Badge` for tags, counts, current month, and compact labels.
+- Use `StatusBadge` for normalized domain statuses.
+- Active/paid: `border-success/20 bg-success/10 text-success`.
+- Partial/info: `border-info/20 bg-info/10 text-info`.
+- Due: `border-warning/20 bg-warning/10 text-warning-foreground`.
+- Overdue/destructive: `border-destructive/20 bg-destructive/10 text-destructive`.
+- Archived/not-started/waived: muted border/background/text.
+- Tags generally use `variant="secondary"` and `text-xs`.
+
+Reference files:
+
+- `src/components/app/status-badge.tsx`
+- `src/components/app/page-header.tsx`
+
+## Forms And Inputs
+
+- Inputs are compact and admin-focused; default height follows the primitive (`h-9` convention).
+- Dense filters use `h-8` controls where appropriate.
+- Search controls use a leading `SearchIcon` and left padding.
+- Standalone forms use card composition: `CardHeader`, `CardContent`, `CardFooter`.
+- Create/edit flows often use sheets for students, teachers, and batches.
+- Preserve all zod schemas, server actions, pending states, dirty guards, and validation messages when changing layout.
+
+Reference files:
+
+- `src/components/students/student-form.tsx`
+- `src/components/students/student-fields.tsx`
+- `src/components/students/student-create-sheet-client.tsx`
+- `src/components/teachers/teacher-form.tsx`
+- `src/components/batches/batch-sheet.tsx`
+
+## Sheets, Dialogs, Empty, Loading
+
+- Use sheets for create/edit workflows that should not navigate away from list/detail context.
+- Use dialogs for confirmations, receipt previews, and focused modal tasks.
+- Empty states should be quiet and actionable, using existing `Empty` primitives.
+- Skeletons should match the real layout density: filter bar skeletons plus row-like skeletons for tables.
+- Do not replace real loading/error behavior with mock-only states from `ui-reference/`.
+
+## Receipts
+
+- Receipt previews and PDFs should share the same professional visual structure.
+- Use real receipt/payment/ledger/tenant data only.
+- Keep the receipt hierarchy clear: header, metadata, person/billing details, amount rows, paid/due emphasis, note, signature/footer.
+- Paid amounts use success coloring; due amounts use destructive coloring.
+- Receipt actions appear only when a real payment record exists.
+
+Reference files:
+
+- `src/components/receipts/student-payment-receipt.tsx`
+- `src/components/receipts/student-payment-receipt-dialog.tsx`
+- `src/components/salaries/salary-payment-receipt.tsx`
+- `src/components/salaries/salary-payment-receipt-dialog.tsx`
+
+## Icons
+
+- Use `lucide-react` icons.
+- Sidebar icons use default sidebar primitive sizing.
+- Header/button icons are commonly `size-3`, `size-3.5`, or `size-4`.
+- Metric icons are `size-4` inside a `size-8` colored tile.
+- Icon-only controls should use `Button` icon sizes rather than custom square classes unless the primitive cannot handle the case.
+
+## Communication
+
+- Sidebar communication links follow the `ui-reference/` group structure with Automations intentionally omitted.
+- Communication overview, campaigns, templates, and logs currently use `ui-reference/` mockup data as a demo surface until tenant-scoped provider storage, recipient selection, templates, campaigns, and delivery logs exist.
+- Keep this mock data isolated inside Communication UI components so future server loaders, data models, and backend functions can replace it without changing unrelated app logic.
+- Do not connect mock communication data to receipts, ledgers, real students, real teachers, payments, or provider APIs.
+
+## Responsive Behavior
+
+- Prefer simple responsive grids and wrapping flex rows.
+- Tables may remain dense; ensure action groups and labels do not overlap.
+- Use `flex-wrap` for header badges/actions.
+- Use `grid-cols-1` first, then add `sm`, `lg`, or `xl` columns.
+- Avoid viewport-width font scaling.
 
 ## Migration Rules
 
-- Use `ui-reference/` only for visuals.
-- Do not copy reference mock arrays, names, phone numbers, fees, counts, or client navigation.
-- Preserve App Router routes, Server Components, Server Actions, Supabase calls, cache behavior, redirects, auth guards, and validation.
+- Use `ui-reference/` only for visual direction.
+- Do not copy mock arrays, names, phone numbers, fees, counts, placeholder receipts, or client-only navigation.
+- Preserve App Router routes, Server Components, Server Actions, Supabase calls, cache behavior, redirects, auth guards, validation, loading states, and error handling.
 - Keep tenant filters on every tenant read/write.
 - Keep service-role clients server-only.
-- Do not change backend contracts or route handler response shapes.
+- Do not change backend contracts or route handler response shapes for visual work.
 - Migrate page-by-page after shared primitives are aligned.
 
 ## Do / Don't
 
-- Do reuse existing production data loaders, actions, schemas, tables, and domain components.
-- Do keep row actions conditional according to current business rules.
-- Do update docs only when a new reusable pattern or domain concept is introduced.
+- Do reuse `PageHeader`, `Card`, `Button`, `Table`, `Badge`, `StatusBadge`, `Empty`, `Skeleton`, sheets, and dialogs.
+- Do keep page actions above table cards.
+- Do keep filter controls inside the top band of table cards.
+- Do use compact, clear labels and admin-focused copy.
+- Do update this file when a reusable visual convention changes.
 - Do not introduce mock data.
 - Do not bypass `requireAdminContext()`.
-- Do not mutate historical ledgers, receipts, or payments.
-- Do not use `createAdminClient()` in client-facing code.
-- Do not silently refactor unrelated code.
+- Do not move business logic into UI primitives.
+- Do not use decorative gradients, oversized hero layouts, or ornamental backgrounds in the admin app.
+- Do not show payment/receipt actions unless backed by real data.

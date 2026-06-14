@@ -235,10 +235,23 @@ export async function updateBatchStudentFeeOverrides(
 
 export async function archiveStudentBatch(
   batchId: string,
-  assignmentId: string
+  assignmentId: string,
+  formData?: FormData
 ) {
   const admin = await requireAdminContext()
   const supabase = await createClient()
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("student_batches")
+    .select("student_id")
+    .eq("tenant_id", admin.tenantId)
+    .eq("batch_id", batchId)
+    .eq("id", assignmentId)
+    .single()
+
+  if (assignmentError || !assignment) {
+    throw new Error(assignmentError?.message ?? "Batch assignment not found.")
+  }
+
   const { error } = await supabase
     .from("student_batches")
     .update({ status: "archived" })
@@ -250,7 +263,19 @@ export async function archiveStudentBatch(
     throw new Error(error.message)
   }
 
+  const feeStartMonth = assignmentFeeStartMonth(formData ?? new FormData())
+
+  if (feeStartMonth === currentMonthStart()) {
+    await recalculateCurrentStudentMonthlyLedger(
+      assignment.student_id,
+      `/batches/${batchId}`
+    )
+  } else {
+    await ensureStudentMonthlyLedger(assignment.student_id, feeStartMonth)
+  }
+
   revalidateTag(STUDENTS_ROUTE_CACHE_TAG, { expire: 0 })
+  revalidatePath("/fees")
   revalidatePath(`/batches/${batchId}`)
 }
 

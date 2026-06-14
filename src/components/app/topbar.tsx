@@ -9,25 +9,33 @@ import {
   UserIcon,
 } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useRef, useState } from "react"
 
 import { signOut } from "@/lib/auth/actions"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import type { AdminContext } from "@/lib/auth/user"
 
 export function Topbar({ admin }: { admin: AdminContext }) {
+  const [accountOpen, setAccountOpen] = useState(false)
+  const accountRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (!accountRef.current?.contains(event.target as Node)) {
+        setAccountOpen(false)
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
+  }, [])
+
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
       <SidebarTrigger className="-ml-1" />
@@ -57,49 +65,65 @@ export function Topbar({ admin }: { admin: AdminContext }) {
 
         <Separator className="h-5" orientation="vertical" />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button className="h-8 gap-2 px-2" type="button" variant="ghost" />
-            }
+        <div className="relative" ref={accountRef}>
+          <Button
+            aria-expanded={accountOpen}
+            className="h-8 gap-2 px-2"
+            onClick={() => setAccountOpen((open) => !open)}
+            type="button"
+            variant="ghost"
           >
-            <Avatar className="size-6">
-              <AvatarFallback className="bg-primary text-[10px] font-semibold text-primary-foreground">
-                {profileInitials(admin.adminName)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="hidden text-sm font-medium sm:inline">
-              {admin.adminName}
-            </span>
-            <ChevronDownIcon className="size-3 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="font-normal">
+              <Avatar className="size-6">
+                <AvatarFallback className="bg-primary text-[10px] font-semibold text-primary-foreground">
+                  {profileInitials(admin.adminName)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden text-sm font-medium sm:inline">
+                {admin.adminName}
+              </span>
+              <ChevronDownIcon className="size-3 text-muted-foreground" />
+          </Button>
+
+          {accountOpen ? (
+            <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+              <div className="px-1.5 py-1 font-normal">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium">{admin.adminName}</span>
                 <span className="text-xs text-muted-foreground">
-                  Administrator
+                  {admin.adminEmail}
                 </span>
               </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <UserIcon className="size-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem render={<Link href="/settings" />}>
-              <SettingsIcon className="size-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <form action={signOut}>
-              <DropdownMenuItem render={<button type="submit" />}>
-                <LogOutIcon className="size-4" />
-                Log out
-              </DropdownMenuItem>
-            </form>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              </div>
+              <div className="-mx-1 my-1 h-px bg-border" />
+              <Link
+                className="relative flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                href="/account/profile"
+                onClick={() => setAccountOpen(false)}
+              >
+                <UserIcon className="size-4" />
+                Profile
+              </Link>
+              <Link
+                className="relative flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                href="/account/settings"
+                onClick={() => setAccountOpen(false)}
+              >
+                <SettingsIcon className="size-4" />
+                Settings
+              </Link>
+              <div className="-mx-1 my-1 h-px bg-border" />
+              <form action={signOut}>
+                <button
+                  className="relative flex w-full cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm text-destructive outline-hidden select-none hover:bg-destructive/10 focus:bg-destructive/10"
+                  type="submit"
+                >
+                  <LogOutIcon className="size-4" />
+                  Log out
+                </button>
+              </form>
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
   )

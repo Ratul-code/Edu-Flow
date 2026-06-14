@@ -7,6 +7,8 @@ This document summarizes the domain model defined by `supabase/migrations`. It f
 Edu Flow is tenant-scoped. A tenant represents one coaching centre workspace.
 
 - `tenants` is the root entity for centre profile and subscription state.
+- Tenant centre profile requires name, address, contact phone, and email.
+- Tenant centre profile can store an optional `logo_url`, currently used for uploaded logo data.
 - `admin_users` links Supabase Auth users to a tenant.
 - Application tables store `tenant_id` and are isolated by row level security.
 - The helper `current_admin_tenant_id()` resolves the active admin tenant from the authenticated Supabase user.
@@ -68,8 +70,11 @@ Academic classification is tenant-managed.
 
 - `class_levels` stores class/grade options per tenant.
 - `academic_groups` stores group options per tenant.
+- `medium_options` stores medium options per tenant.
+- Default class levels are inserted for each tenant: Class 4 through Class 12.
 - Default academic groups are inserted for each tenant: Science, Commerce, Arts.
-- Medium is stored on students and batches but is not tenant-managed by a separate table.
+- Default mediums are inserted for each tenant: Bangla Medium, English Version, English Medium.
+- Students and batches store the selected class level, group, and medium as historical text values.
 
 ## Student Billing Model
 
@@ -136,12 +141,14 @@ Teacher salaries are also month-ledger based.
 
 ### Teacher Payment Settings
 
-`teacher_payment_settings` stores the tenant’s salary payment system.
+`teacher_payment_settings` stores the tenant’s salary payment system and payment window policy.
 
 Business rules:
 
 - `prepaid`: the salary ledger opens in the same month.
 - `postpaid`: the salary ledger opens in the following month.
+- Payment start day is limited to days 1-15.
+- Grace period is limited to 0-15 days.
 
 ### Salary Ledgers
 
@@ -152,7 +159,7 @@ Business rules:
 - Unique per tenant, teacher, and salary month.
 - Expected salary starts from the teacher’s default monthly salary.
 - Adjustments can change the amount due for that month.
-- Payment start date is stored on the ledger.
+- Payment start date and grace end date are stored on the ledger.
 - Status tracks unpaid, partial, paid, or waived.
 - Changing a teacher’s default salary affects future ledgers, not existing snapshots.
 
@@ -180,6 +187,78 @@ The function is idempotent:
 - It uses tenant/month uniqueness to avoid duplicates.
 - It only creates missing rows.
 - It respects student `fee_start_month`.
+
+## SMS Credit And Messaging Model
+
+SMS is tenant-scoped. Credits belong to the coaching centre, not individual admins, but usage records keep the admin id for audit history.
+
+### SMS Wallet
+
+`tenant_sms_wallets` stores one wallet per tenant.
+
+Business rules:
+
+- `available_credits` are immediately usable credits.
+- `reserved_credits` are locked for queued/sending communication messages.
+- Purchased, used, and refunded lifetime totals are tracked on the wallet.
+- Credits cannot go below zero.
+- If `sms_enabled` is false, communication message reservation is blocked.
+
+### SMS Credit Ledger
+
+`sms_credit_transactions` is the immutable credit statement.
+
+Business rules:
+
+- Every wallet mutation creates one transaction row.
+- Positive `credit_amount` means credits were added or refunded.
+- Negative `credit_amount` means credits were reserved, used, or removed.
+- Transactions can reference communication messages, recharge requests, or manual adjustments.
+
+### Recharge And Packages
+
+`sms_credit_packages` stores active recharge package definitions.
+`sms_recharge_requests` stores tenant recharge requests.
+
+Business rules:
+
+- Approving a recharge request adds purchased credits to the wallet.
+- Approval creates a `purchase` credit transaction.
+- Rejected requests do not affect wallet credits.
+
+### Templates And Settings
+
+`sms_templates` stores tenant message templates, including default templates for payment confirmation, reminders, grace-period notices, and overdue warnings.
+`tenant_sms_settings` stores each tenant’s SMS preferences and automation template selections.
+
+Business rules:
+
+- Templates and settings are tenant-scoped.
+- Recipient options are student, guardian, or both.
+- Automatic SMS rules should skip and record recipient/message history when credits are insufficient.
+
+### Communication Messages And Recipients
+
+`communication_messages` stores one send action for any current or future
+communication channel. Examples include manual SMS, payment confirmations, fee
+reminders, and future WhatsApp, email, push, or in-app notices.
+
+`communication_recipients` stores one recipient row under a communication
+message. Recipient-level delivery status, provider ids, provider responses, and
+errors live here for MVP, so a separate SMS log table is not needed.
+
+Business rules:
+
+- ASCII-only SMS credit math uses 160 characters per segment.
+- Any non-ASCII character makes the whole message Unicode, using 67 characters per segment.
+- Required credits are `segments_per_recipient * recipient_count`.
+- Manual/bulk sending must be blocked when `available_credits < required credits`.
+- Sending reserves credits first.
+- Successful sends consume reserved credits.
+- Failed or unbilled sends refund reserved credits.
+- `communication_messages.channel` supports `sms`, `whatsapp`, `email`, `push`, and `in_app`.
+- `communication_messages` stores aggregate counts and credit totals.
+- `communication_recipients` stores the final rendered message body and per-recipient delivery state.
 
 ## Isolation And Integrity
 

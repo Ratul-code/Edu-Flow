@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -31,19 +32,18 @@ export function TeacherPaymentSettingsForm({
   return (
     <form action={updateTeacherPaymentSettings}>
       <Card>
-        <CardHeader>
+        <CardHeader className="gap-1">
           <div className="flex items-center gap-2">
-            <WalletCardsIcon className="size-5 text-primary" />
-            <CardTitle>Teacher Payment</CardTitle>
+            <WalletCardsIcon className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Teacher Payment</CardTitle>
           </div>
-          <CardDescription>
-            Choose whether teacher salary opens in the same month or the next
-            month.
+          <CardDescription className="text-xs">
+            Configure salary collection month, start day, and grace period.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <FieldGroup>
-            <Field>
+          <FieldGroup className="sm:grid sm:grid-cols-2">
+            <Field className="sm:col-span-2">
               <FieldLabel htmlFor="teacher_payment_system">
                 Payment system
               </FieldLabel>
@@ -57,19 +57,53 @@ export function TeacherPaymentSettingsForm({
                 <SelectContent align="start">
                   <SelectGroup>
                     <SelectItem value="prepaid">
-                      Prepaid - June salary opens on June 1
+                      Prepaid - June salary opens in June
                     </SelectItem>
                     <SelectItem value="postpaid">
-                      Postpaid - June salary opens on July 1
+                      Postpaid - June salary opens in July
                     </SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </Field>
+            <Field>
+              <FieldLabel htmlFor="teacher_payment_start_day">
+                Payment start day
+              </FieldLabel>
+              <Input
+                defaultValue={settings.payment_start_day}
+                id="teacher_payment_start_day"
+                max="15"
+                min="1"
+                name="payment_start_day"
+                required
+                type="number"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="teacher_grace_period_days">
+                Grace period days
+              </FieldLabel>
+              <Input
+                defaultValue={settings.grace_period_days}
+                id="teacher_grace_period_days"
+                max="15"
+                min="0"
+                name="grace_period_days"
+                required
+                type="number"
+              />
+            </Field>
           </FieldGroup>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Salary start day is locked between 1-15. Grace period is locked
+            between 0-15 days.
+          </p>
         </CardContent>
-        <CardFooter className="justify-end">
-          <Button type="submit">Save teacher payment</Button>
+        <CardFooter>
+          <Button className="w-full" size="sm" type="submit">
+            Save teacher payment
+          </Button>
         </CardFooter>
       </Card>
     </form>

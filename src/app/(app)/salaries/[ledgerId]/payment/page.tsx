@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ConfirmActionForm } from "@/components/app/confirm-action-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -138,7 +139,13 @@ export default async function SalaryPaymentPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 px-5 pt-2">
-              <form action={recordTeacherSalaryPayment.bind(null, ledger.id)}>
+              <ConfirmActionForm
+                action={recordTeacherSalaryPayment.bind(null, ledger.id)}
+                confirmLabel="Confirm salary payment"
+                description="This will record the teacher salary payment and update the salary ledger."
+                pendingLabel="Recording payment..."
+                title="Record this salary payment?"
+              >
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -247,7 +254,7 @@ export default async function SalaryPaymentPage({
                     </Button>
                   </div>
                 </div>
-              </form>
+              </ConfirmActionForm>
             </CardContent>
           </Card>
         </div>

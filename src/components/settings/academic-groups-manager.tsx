@@ -1,9 +1,24 @@
 "use client"
 
-import { PlusIcon, SaveIcon, Trash2Icon } from "lucide-react"
+import { PencilIcon, PlusIcon, Trash2Icon, UsersIcon } from "lucide-react"
 import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
@@ -18,6 +33,7 @@ type AcademicGroupsManagerProps = {
 }
 
 export function AcademicGroupsManager({ groups }: AcademicGroupsManagerProps) {
+  const [editing, setEditing] = useState<AcademicGroupRecord | null>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -32,11 +48,14 @@ export function AcademicGroupsManager({ groups }: AcademicGroupsManagerProps) {
     })
   }
 
-  function handleUpdate(groupId: string, formData: FormData) {
+  function handleUpdate(formData: FormData) {
+    if (!editing) return
+
     setError(null)
     startTransition(async () => {
       try {
-        await updateAcademicGroup(groupId, formData)
+        await updateAcademicGroup(editing.id, formData)
+        setEditing(null)
       } catch (caughtError) {
         setError(errorMessage(caughtError, "Could not update group."))
       }
@@ -59,73 +78,103 @@ export function AcademicGroupsManager({ groups }: AcademicGroupsManagerProps) {
   }
 
   return (
-    <div className="mt-6 flex flex-col gap-4 border-t pt-6">
-      <div>
-        <h3 className="text-lg font-medium text-foreground">Groups</h3>
-        <p className="text-sm text-muted-foreground">
-          Default groups are Science, Commerce, and Arts. Edit, remove, or add
-          more groups for student and batch forms.
-        </p>
-      </div>
-
-      {error ? <p className="text-sm font-medium text-destructive">{error}</p> : null}
-
-      <div className="rounded-xl border bg-white shadow-sm">
-        <div className="divide-y">
-          {groups.map((group) => (
-            <form
-              action={handleUpdate.bind(null, group.id)}
-              className="flex items-end gap-2 p-3"
-              key={group.id}
-            >
-              <Field className="flex-1">
-                <FieldLabel htmlFor={`group-${group.id}`} className="sr-only">
-                  {group.name}
-                </FieldLabel>
-                <Input
-                  defaultValue={group.name}
-                  disabled={isPending}
-                  id={`group-${group.id}`}
-                  name="name"
-                  required
-                />
-              </Field>
-              <Button disabled={isPending} size="icon-sm" type="submit" variant="outline">
-                <SaveIcon />
-                <span className="sr-only">Save {group.name}</span>
-              </Button>
+    <Card className="gap-4 py-5">
+      <CardHeader className="flex-row items-center justify-between px-5 pb-0 pt-0">
+        <div>
+          <div className="flex items-center gap-2">
+            <UsersIcon className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold">Academic Groups</CardTitle>
+          </div>
+          <CardDescription className="mt-0.5 text-xs">
+            {groups.length} groups configured
+          </CardDescription>
+        </div>
+        <Button size="icon-xs" type="button" variant="outline">
+          <PlusIcon className="size-3.5" />
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-1.5 px-5 pt-2">
+        {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
+        {groups.map((group) => (
+          <div
+            className="flex items-center justify-between rounded-md border px-3 py-2"
+            key={group.id}
+          >
+            <span className="text-sm">{group.name}</span>
+            <div className="flex items-center gap-1">
               <Button
                 disabled={isPending}
-                onClick={() => handleDelete(group)}
-                size="icon-sm"
+                onClick={() => setEditing(group)}
+                size="icon-xs"
                 type="button"
                 variant="ghost"
               >
-                <Trash2Icon />
-                <span className="sr-only">Remove {group.name}</span>
+                <PencilIcon className="size-3" />
+                <span className="sr-only">Edit {group.name}</span>
               </Button>
-            </form>
-          ))}
-        </div>
-
-        <form action={handleCreate} className="flex items-end gap-2 border-t bg-muted/20 p-3">
-          <Field className="flex-1">
-            <FieldLabel htmlFor="group-new">Add group</FieldLabel>
-            <Input
-              disabled={isPending}
-              id="group-new"
-              name="name"
-              placeholder="New group"
-              required
-            />
-          </Field>
-          <Button disabled={isPending} type="submit">
-            <PlusIcon data-icon="inline-start" />
+              <Button
+                className="text-muted-foreground hover:text-destructive"
+                disabled={isPending}
+                onClick={() => handleDelete(group)}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                <Trash2Icon className="size-3" />
+                <span className="sr-only">Delete {group.name}</span>
+              </Button>
+            </div>
+          </div>
+        ))}
+        <form action={handleCreate} className="flex gap-2 pt-1">
+          <Input
+            className="h-7 flex-1 text-xs"
+            disabled={isPending}
+            name="name"
+            placeholder="New group..."
+            required
+          />
+          <Button
+            className="h-7 px-2 text-xs"
+            disabled={isPending}
+            size="sm"
+            type="submit"
+          >
             Add
           </Button>
         </form>
-      </div>
-    </div>
+      </CardContent>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <form action={handleUpdate}>
+            <DialogHeader>
+              <DialogTitle>Edit academic group</DialogTitle>
+              <DialogDescription>
+                Rename this group for future student and batch forms.
+              </DialogDescription>
+            </DialogHeader>
+            <Field className="my-4">
+              <FieldLabel htmlFor="edit-academic-group">Group</FieldLabel>
+              <Input
+                defaultValue={editing?.name ?? ""}
+                id="edit-academic-group"
+                name="name"
+                required
+              />
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+                Cancel
+              </Button>
+              <Button disabled={isPending} type="submit">
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Card>
   )
 }
 

@@ -8,9 +8,14 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   CreditCardIcon,
+  FileTextIcon,
   GraduationCapIcon,
   LayoutDashboardIcon,
+  MegaphoneIcon,
+  MessageSquareIcon,
+  ScrollTextIcon,
   SettingsIcon,
+  Settings2Icon,
   UsersRoundIcon,
   ZapIcon,
 } from "lucide-react"
@@ -64,12 +69,6 @@ const navItems = [
     icon: BellIcon,
   },
   {
-    title: "Notifications",
-    href: "/notifications",
-    icon: BellIcon,
-    badge: "3",
-  },
-  {
     title: "Settings",
     href: "/settings",
     icon: SettingsIcon,
@@ -89,13 +88,53 @@ const feeSubItems = [
   },
 ]
 
+const communicationSubItems = [
+  {
+    title: "Overview",
+    href: "/communication",
+    icon: LayoutDashboardIcon,
+  },
+  {
+    title: "SMS Channel",
+    href: "/communication/sms",
+    icon: MessageSquareIcon,
+  },
+  {
+    title: "Message History",
+    href: "/notifications/message-history",
+    icon: MegaphoneIcon,
+  },
+  {
+    title: "Templates",
+    href: "/communication/templates",
+    icon: FileTextIcon,
+  },
+  {
+    title: "Logs",
+    href: "/communication/logs",
+    icon: ScrollTextIcon,
+  },
+  {
+    title: "Settings",
+    href: "/communication/settings",
+    icon: Settings2Icon,
+  },
+]
+
 export function AppSidebar() {
   const pathname = usePathname()
   const feesGroupActive = feeSubItems.some((item) =>
     isRouteActive(pathname, item.href)
   )
+  const communicationGroupActive = communicationSubItems.some((item) =>
+    isRouteActive(pathname, item.href)
+  )
   const [feesOpen, setFeesOpen] = useState(feesGroupActive)
+  const [communicationOpen, setCommunicationOpen] = useState(
+    communicationGroupActive
+  )
   const showFees = feesGroupActive || feesOpen
+  const showCommunication = communicationGroupActive || communicationOpen
 
   return (
     <Sidebar className="border-r-0" collapsible="icon">
@@ -133,43 +172,27 @@ export function AppSidebar() {
               <NavLink item={navItems[0]} pathname={pathname} />
               <NavLink item={navItems[1]} pathname={pathname} />
               <NavLink item={navItems[2]} pathname={pathname} />
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="cursor-pointer"
-                  isActive={feesGroupActive}
-                  onClick={() => setFeesOpen((open) => !open)}
-                  tooltip="Fees & Salaries"
-                  type="button"
-                >
-                  <CreditCardIcon />
-                  <span>Fees &amp; Salaries</span>
-                  <ChevronDownIcon
-                    className={cn(
-                      "ml-auto transition-transform duration-200",
-                      showFees && "rotate-180"
-                    )}
-                  />
-                </SidebarMenuButton>
-                {showFees ? (
-                  <SidebarMenuSub>
-                    {feeSubItems.map((item) => (
-                      <SidebarMenuSubItem key={item.href}>
-                        <SidebarMenuSubButton
-                          className="cursor-pointer"
-                          isActive={isRouteActive(pathname, item.href)}
-                          render={<Link href={item.href} />}
-                        >
-                          <item.icon className="size-3.5" />
-                          <span>{item.title}</span>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                ) : null}
-              </SidebarMenuItem>
-              {navItems.slice(3).map((item) => (
-                <NavLink item={item} key={item.href} pathname={pathname} />
-              ))}
+              <NavGroup
+                icon={CreditCardIcon}
+                isActive={feesGroupActive}
+                isOpen={showFees}
+                items={feeSubItems}
+                onToggle={() => setFeesOpen((open) => !open)}
+                pathname={pathname}
+                title="Fees & Salaries"
+              />
+              <NavLink item={navItems[3]} pathname={pathname} />
+              <NavLink item={navItems[4]} pathname={pathname} />
+              <NavGroup
+                icon={MessageSquareIcon}
+                isActive={communicationGroupActive}
+                isOpen={showCommunication}
+                items={communicationSubItems}
+                onToggle={() => setCommunicationOpen((open) => !open)}
+                pathname={pathname}
+                title="Communication"
+              />
+              <NavLink item={navItems[5]} pathname={pathname} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -230,6 +253,61 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
           </Badge>
         ) : null}
       </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+function NavGroup({
+  icon: Icon,
+  isActive,
+  isOpen,
+  items,
+  onToggle,
+  pathname,
+  title,
+}: {
+  icon: LucideIcon
+  isActive: boolean
+  isOpen: boolean
+  items: NavItem[]
+  onToggle: () => void
+  pathname: string
+  title: string
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        className="cursor-pointer"
+        isActive={isActive}
+        onClick={onToggle}
+        tooltip={title}
+        type="button"
+      >
+        <Icon />
+        <span>{title}</span>
+        <ChevronDownIcon
+          className={cn(
+            "ml-auto transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </SidebarMenuButton>
+      {isOpen ? (
+        <SidebarMenuSub>
+          {items.map((item) => (
+            <SidebarMenuSubItem key={item.href}>
+              <SidebarMenuSubButton
+                className="cursor-pointer"
+                isActive={isRouteActive(pathname, item.href)}
+                render={<Link href={item.href} />}
+              >
+                <item.icon className="size-3.5" />
+                <span>{item.title}</span>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+          ))}
+        </SidebarMenuSub>
+      ) : null}
     </SidebarMenuItem>
   )
 }

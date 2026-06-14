@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArchiveConfirmDialog } from "@/components/app/archive-confirm-dialog"
 import { StatusBadge } from "@/components/app/status-badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -69,7 +70,7 @@ export function TeachersTable({
               {teacher.phone || "-"}
             </TableCell>
             <TableCell className="py-3 text-sm">
-              {teacher.subject_specialty || "-"}
+              <SubjectBadges value={teacher.subject_specialty} />
             </TableCell>
             <TableCell className="py-3 text-right text-sm">
               {(batchCountsByTeacherId[teacher.id] ?? 0).toLocaleString("en-BD")}
@@ -142,4 +143,29 @@ function initials(name: string) {
     .join("")
 
   return letters.toUpperCase() || "TC"
+}
+
+function SubjectBadges({ value }: { value: string | null }) {
+  const subjects = tagsFromText(value)
+
+  if (!subjects.length) {
+    return <span className="text-muted-foreground">-</span>
+  }
+
+  return (
+    <div className="flex max-w-[220px] flex-wrap gap-1">
+      {subjects.map((subject) => (
+        <Badge key={subject} variant="outline">
+          {subject}
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
+function tagsFromText(value: string | null | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
