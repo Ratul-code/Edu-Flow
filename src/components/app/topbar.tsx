@@ -1,7 +1,6 @@
 "use client"
 
 import {
-  BellIcon,
   ChevronDownIcon,
   LogOutIcon,
   SearchIcon,
@@ -13,7 +12,6 @@ import { useEffect, useRef, useState } from "react"
 
 import { signOut } from "@/lib/auth/actions"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -50,21 +48,6 @@ export function Topbar({ admin }: { admin: AdminContext }) {
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <Button
-          className="relative"
-          render={<Link href="/notifications" />}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <BellIcon className="size-4" />
-          <Badge className="absolute -top-0.5 -right-0.5 size-4 justify-center p-0 text-[9px] leading-none">
-            3
-          </Badge>
-          <span className="sr-only">Notifications</span>
-        </Button>
-
-        <Separator className="h-5" orientation="vertical" />
-
         <div className="relative" ref={accountRef}>
           <Button
             aria-expanded={accountOpen}

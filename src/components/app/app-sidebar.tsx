@@ -101,7 +101,7 @@ const communicationSubItems = [
   },
   {
     title: "Message History",
-    href: "/notifications/message-history",
+    href: "/communication/logs",
     icon: MegaphoneIcon,
   },
   {

@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react"
 import {
-  BellIcon,
   BookOpenIcon,
   CalendarDaysIcon,
   GraduationCapIcon,
@@ -157,26 +156,6 @@ export const adminModules = {
     filters: [
       { label: "Status", options: ["All", "Paid", "Partial", "Unpaid"] },
       { label: "Method", options: ["All", "Cash", "Bank", "Other"] },
-    ],
-  },
-  notifications: {
-    title: "Notifications",
-    description:
-      "SMS receipts, due reminders, templates, and delivery logs will live here.",
-    icon: BellIcon,
-    createLabel: "New message",
-    emptyTitle: "No notification logs yet",
-    emptyDescription:
-      "Payment receipts and reminders will appear here after the SMS adapter is connected.",
-    columns: [
-      { key: "recipient", label: "Recipient" },
-      { key: "type", label: "Type" },
-      { key: "channel", label: "Channel" },
-      { key: "status", label: "Status" },
-    ],
-    filters: [
-      { label: "Channel", options: ["All", "SMS", "WhatsApp"] },
-      { label: "Status", options: ["All", "Sent", "Failed", "Queued"] },
     ],
   },
   settings: {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { requireAdminContext } from "@/lib/auth/user"
+import { sendPaymentConfirmationSms } from "@/lib/actions/sms"
 import {
   currentMonthStart,
   getBillingSettings,
@@ -396,7 +397,7 @@ async function saveStudentPayment(
   const { data: ledger, error: ledgerError } = await supabase
     .from("student_monthly_ledgers")
     .select(
-      "id, tenant_id, student_id, ledger_month, expected_amount, discount_amount, paid_amount, due_amount, payment_start_date, grace_end_date"
+      "id, tenant_id, student_id, ledger_month, expected_amount, discount_amount, paid_amount, due_amount, payment_start_date, grace_end_date, student:students(name, phone, guardian_name, guardian_phone)"
     )
     .eq("tenant_id", admin.tenantId)
     .eq("id", ledgerId)
@@ -480,14 +481,52 @@ async function saveStudentPayment(
     throw new Error(updateError.message)
   }
 
+  const student = Array.isArray(ledger.student)
+    ? ledger.student[0]
+    : ledger.student
+  let smsStatus:
+    | Awaited<ReturnType<typeof sendPaymentConfirmationSms>>
+    | null = null
+
+  if (student) {
+    try {
+      smsStatus = await sendPaymentConfirmationSms({
+        amount,
+        dueAmountAfterPayment: nextDueAmount,
+        expectedAmount: netAmount,
+        guardianName: student.guardian_name,
+        guardianPhone: student.guardian_phone,
+        ledgerId: ledger.id,
+        ledgerMonth: ledger.ledger_month,
+        paidAmountAfterPayment: paidAmount,
+        paymentDate: payment.payment_date || today(),
+        paymentMethod: payment.method,
+        receiptNo,
+        studentId: ledger.student_id,
+        studentName: student.name,
+        studentPhone: student.phone,
+      })
+    } catch (error) {
+      smsStatus = {
+        delivered: 0,
+        failed: 0,
+        skipped:
+          error instanceof Error
+            ? error.message
+            : "Payment confirmation SMS could not be sent.",
+      }
+    }
+  }
+
   revalidatePath("/fees")
   revalidatePath("/dashboard")
+  revalidatePath("/communication/logs")
   const flashToast = {
     title: nextDueAmount <= 0 ? "Fee fully paid" : "Partial fee recorded",
-    message:
-      nextDueAmount <= 0
-        ? "The student's monthly fee is now fully paid."
-        : "The payment was saved and the remaining due amount was updated.",
+    message: paymentFlashMessage({
+      nextDueAmount,
+      smsStatus,
+    }),
     tone: nextDueAmount <= 0 ? "success" : "warning",
   } as const
 
@@ -690,6 +729,39 @@ async function nextReceiptNo(tenantId: string, ledgerMonth: string) {
 
 function isUniqueReceiptError(message: string) {
   return message.toLowerCase().includes("duplicate")
+}
+
+function paymentFlashMessage({
+  nextDueAmount,
+  smsStatus,
+}: {
+  nextDueAmount: number
+  smsStatus:
+    | Awaited<ReturnType<typeof sendPaymentConfirmationSms>>
+    | null
+}) {
+  const paymentMessage =
+    nextDueAmount <= 0
+      ? "The student's monthly fee is now fully paid."
+      : "The payment was saved and the remaining due amount was updated."
+
+  if (!smsStatus) {
+    return paymentMessage
+  }
+
+  if (smsStatus.delivered > 0) {
+    return `${paymentMessage} Payment confirmation SMS sent.`
+  }
+
+  if (smsStatus.failed > 0) {
+    return `${paymentMessage} Payment confirmation SMS failed.`
+  }
+
+  if (smsStatus.skipped && smsStatus.skipped !== "Payment SMS disabled.") {
+    return `${paymentMessage} SMS not sent: ${smsStatus.skipped}`
+  }
+
+  return paymentMessage
 }
 
 function stringField(formData: FormData, key: string) {

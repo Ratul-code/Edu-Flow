@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -29,22 +29,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 import type { BatchRecord } from "@/lib/data/batches"
 import type { SmsTemplateRecord } from "@/lib/data/sms"
+import type { StudentRecord } from "@/lib/data/students"
+import {
+  hasLatinLettersOutsideTemplateTokens,
+  hasBanglaText,
+  stripLatinLettersOutsideTemplateTokens,
+} from "@/lib/sms/bangla-text"
 
 type RecipientMode = "individual" | "bulk" | "custom"
 type RecipientType = "student" | "guardian" | "both"
 
 type SmsChannelComposeProps = {
   availableCredits: number
+  assignedBatchIdsByStudent: Record<string, string[]>
   batches: BatchRecord[]
   classLevels: string[]
   groups: string[]
   mediums: string[]
+  sendAction: (formData: FormData) => void | Promise<void>
+  smsMode: "demo" | "production"
+  smsSignature: string | null
+  students: StudentRecord[]
   tags: string[]
   templates: SmsTemplateRecord[]
-  totalActiveStudents: number
 }
 
 const messageVariables = [
@@ -62,51 +81,128 @@ const messageVariables = [
 ]
 
 const previewVariableValues: Record<string, string> = {
-  amount: "৳2,000",
-  coaching_name: "Uttara Coaching Center",
-  coaching_phone: "01712-345678",
-  due_amount: "৳1,200",
-  due_date: "10 Jun 2026",
-  guardian_name: "Mst. Nasima Akter",
-  month: "June 2026",
-  paid_amount: "৳800",
-  payment_date: "5 Jun 2026",
-  receipt_link: "https://edu.flow/r/8F2K9",
-  student_name: "Rahim Uddin",
+  amount: "৳২,০০০",
+  coaching_name: "উত্তরা কোচিং সেন্টার",
+  coaching_phone: "০১৭১২-৩৪৫৬৭৮",
+  due_amount: "৳১,২০০",
+  due_date: "১০ জুন ২০২৬",
+  guardian_name: "নাসিমা আক্তার",
+  month: "জুন ২০২৬",
+  paid_amount: "৳৮০০",
+  payment_date: "৫ জুন ২০২৬",
+  receipt_link: "",
+  student_name: "রাহিম উদ্দিন",
 }
+
+const nativeSelectClassName =
+  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function SmsChannelCompose({
   availableCredits,
+  assignedBatchIdsByStudent,
   batches,
   classLevels,
   groups,
   mediums,
+  sendAction,
+  smsMode,
+  smsSignature,
+  students,
   tags,
   templates,
-  totalActiveStudents,
 }: SmsChannelComposeProps) {
   const [recipientMode, setRecipientMode] = useState<RecipientMode>("bulk")
   const [recipientType, setRecipientType] = useState<RecipientType>("guardian")
+  const [selectedStudentId, setSelectedStudentId] = useState("")
+  const [classLevel, setClassLevel] = useState("all")
+  const [medium, setMedium] = useState("all")
+  const [groupName, setGroupName] = useState("all")
+  const [batchId, setBatchId] = useState("all")
+  const [tag, setTag] = useState("all")
+  const [bulkSheetOpen, setBulkSheetOpen] = useState(false)
+  const [selectedBulkStudentIds, setSelectedBulkStudentIds] = useState<
+    Set<string>
+  >(new Set())
   const [selectedTemplateId, setSelectedTemplateId] = useState("none")
   const [selectedVariable, setSelectedVariable] = useState("none")
   const [message, setMessage] = useState("")
+  const [studentSearch, setStudentSearch] = useState("")
   const [customNumbers, setCustomNumbers] = useState("")
   const messageTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const selectedTemplate = templates.find(
     (template) => template.id === selectedTemplateId
   )
+  const matchingStudents = useMemo(() => {
+    const query = studentSearch.trim().toLowerCase()
+
+    if (!query) {
+      return students
+    }
+
+    return students.filter((student) => {
+      return [
+        student.name,
+        student.phone,
+        student.guardian_phone,
+        student.guardian_name,
+      ].some((value) => value?.toLowerCase().includes(query))
+    })
+  }, [studentSearch, students])
+  const selectedStudent = students.find((item) => item.id === selectedStudentId)
+  const filteredBulkStudents = useMemo(() => {
+    return students.filter((student) => {
+      const matchesClass =
+        classLevel === "all" || student.class_level === classLevel
+      const matchesMedium = medium === "all" || student.medium === medium
+      const matchesGroup = groupName === "all" || student.group_name === groupName
+      const matchesBatch =
+        batchId === "all" ||
+        (assignedBatchIdsByStudent[student.id] ?? []).includes(batchId)
+      const matchesTag = tag === "all" || student.tags?.includes(tag)
+
+      return (
+        matchesClass &&
+        matchesMedium &&
+        matchesGroup &&
+        matchesBatch &&
+        matchesTag
+      )
+    })
+  }, [
+    assignedBatchIdsByStudent,
+    batchId,
+    classLevel,
+    groupName,
+    medium,
+    students,
+    tag,
+  ])
+  const selectedBulkCount = selectedBulkStudentIds.size
+  const selectedBulkStudents = useMemo(
+    () => students.filter((student) => selectedBulkStudentIds.has(student.id)),
+    [selectedBulkStudentIds, students]
+  )
   const customRecipientCount = countCustomNumbers(customNumbers)
   const recipientCount =
     recipientMode === "individual"
-      ? 1
+      ? selectedStudentId
+        ? 1
+        : 0
       : recipientMode === "custom"
         ? customRecipientCount
-        : totalActiveStudents
+        : selectedBulkCount
   const recipientMultiplier = recipientType === "both" ? 2 : 1
   const phoneCount = recipientCount * recipientMultiplier
   const renderedMessage = renderPreviewMessage(message)
-  const messageForCalculation = renderedMessage.trim() ? renderedMessage : message
+  const signedPreviewMessage = appendSmsSignature(renderedMessage, smsSignature)
+  const messageForCalculation = signedPreviewMessage.trim()
+    ? signedPreviewMessage
+    : appendSmsSignature(message, smsSignature)
+  const hasInvalidSmsText = hasLatinLettersOutsideTemplateTokens(
+    appendSmsSignature(message, smsSignature)
+  )
+  const hasBanglaSmsText = hasBanglaText(appendSmsSignature(message, smsSignature))
   const messageType = isGsmSms(messageForCalculation) ? "GSM" : "Unicode"
   const segmentSize = messageType === "GSM" ? 160 : 67
   const segments = Math.max(
@@ -115,11 +211,18 @@ export function SmsChannelCompose({
   )
   const creditsRequired = segments * phoneCount
   const remainingCredits = availableCredits - creditsRequired
-  const canSend = message.trim().length > 0 && phoneCount > 0 && remainingCredits >= 0
+  const canSend =
+    message.trim().length > 0 &&
+    phoneCount > 0 &&
+    remainingCredits >= 0 &&
+    !hasInvalidSmsText &&
+    hasBanglaSmsText &&
+    (recipientMode !== "individual" || Boolean(selectedStudentId)) &&
+    (recipientMode !== "bulk" || selectedBulkCount > 0)
 
   const recipientSummary = useMemo(() => {
     if (recipientMode === "individual") {
-      return "1 selected student"
+      return selectedStudent ? selectedStudent.name : "No student selected"
     }
 
     if (recipientMode === "custom") {
@@ -128,17 +231,23 @@ export function SmsChannelCompose({
       }`
     }
 
-    return `${totalActiveStudents.toLocaleString("en-US")} matching students`
-  }, [customRecipientCount, recipientMode, totalActiveStudents])
+    return `${selectedBulkCount.toLocaleString("en-US")} selected student${
+      selectedBulkCount === 1 ? "" : "s"
+    }`
+  }, [
+    customRecipientCount,
+    recipientMode,
+    selectedStudent,
+    selectedBulkCount,
+  ])
 
-  function applyTemplate(value: string | null) {
-    const nextValue = value ?? "none"
-    setSelectedTemplateId(nextValue)
+  function applyTemplate(value: string) {
+    setSelectedTemplateId(value)
 
-    const template = templates.find((item) => item.id === nextValue)
+    const template = templates.find((item) => item.id === value)
 
     if (template) {
-      setMessage(template.message_body)
+      setMessage(stripLatinLettersOutsideTemplateTokens(template.message_body))
     }
   }
 
@@ -167,8 +276,55 @@ export function SmsChannelCompose({
     })
   }
 
+  function toggleBulkStudent(studentId: string) {
+    setSelectedBulkStudentIds((current) => {
+      const next = new Set(current)
+
+      if (next.has(studentId)) {
+        next.delete(studentId)
+      } else {
+        next.add(studentId)
+      }
+
+      return next
+    })
+  }
+
+  function toggleVisibleBulkStudents() {
+    setSelectedBulkStudentIds((current) => {
+      const next = new Set(current)
+      const visibleIds = filteredBulkStudents.map((student) => student.id)
+      const everyVisibleSelected =
+        visibleIds.length > 0 && visibleIds.every((id) => next.has(id))
+
+      if (everyVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id))
+      } else {
+        visibleIds.forEach((id) => next.add(id))
+      }
+
+      return next
+    })
+  }
+
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <form action={sendAction} className="space-y-5 p-4 md:p-6">
+      <input name="recipient_mode" type="hidden" value={recipientMode} />
+      {recipientMode === "bulk"
+        ? Array.from(selectedBulkStudentIds).map((studentId) => (
+            <input
+              key={studentId}
+              name="student_ids"
+              type="hidden"
+              value={studentId}
+            />
+          ))
+        : null}
+      {smsMode === "demo" ? (
+        <div className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+          Demo SMS Mode
+        </div>
+      ) : null}
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <Card>
@@ -205,7 +361,62 @@ export function SmsChannelCompose({
 
               {recipientMode === "individual" ? (
                 <Field label="Student">
-                  <Input placeholder="Search by name or phone" />
+                  <input name="student_id" type="hidden" value={selectedStudentId} />
+                  <input
+                    className={nativeSelectClassName}
+                    onChange={(event) => setStudentSearch(event.target.value)}
+                    placeholder="Search by student name, phone, or guardian phone"
+                    type="search"
+                    value={studentSearch}
+                  />
+                  <div className="h-[205px] overflow-y-auto rounded-lg border">
+                    {matchingStudents.length > 0 ? (
+                      matchingStudents.map((student) => {
+                        const active = student.id === selectedStudentId
+
+                        return (
+                          <button
+                            className={`grid min-h-[68px] w-full gap-1 border-b px-4 py-3 text-left last:border-b-0 transition-colors ${
+                              active
+                                ? "bg-primary/10 text-primary"
+                                : "bg-background hover:bg-muted/50"
+                            }`}
+                            key={student.id}
+                            onClick={() => setSelectedStudentId(student.id)}
+                            type="button"
+                          >
+                            <span className="flex items-center justify-between gap-3">
+                              <span className="truncate text-sm font-semibold">
+                                {student.name}
+                              </span>
+                              <span className="shrink-0 text-xs text-muted-foreground">
+                                {student.class_level ?? "No class"}
+                              </span>
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {[student.phone, student.guardian_phone]
+                                .filter(Boolean)
+                                .join(" · ") || "No phone saved"}
+                            </span>
+                          </button>
+                        )
+                      })
+                    ) : (
+                      <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                        No students match this search.
+                      </div>
+                    )}
+                  </div>
+                  {students.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No active students are available for selection.
+                    </p>
+                  ) : null}
+                  {selectedStudent ? (
+                    <p className="text-xs text-muted-foreground">
+                      Selected: {selectedStudent.name}
+                    </p>
+                  ) : null}
                 </Field>
               ) : null}
 
@@ -213,6 +424,7 @@ export function SmsChannelCompose({
                 <Field label="Custom numbers">
                   <Textarea
                     className="min-h-24"
+                    name="custom_numbers"
                     onChange={(event) => setCustomNumbers(event.target.value)}
                     placeholder="One number per line or comma separated"
                     value={customNumbers}
@@ -221,31 +433,189 @@ export function SmsChannelCompose({
               ) : null}
 
               {recipientMode === "bulk" ? (
-                <div className="rounded-lg border">
-                  <div className="flex items-center gap-2 border-b px-4 py-3">
-                    <FilterIcon className="size-4 text-primary" />
-                    <p className="text-sm font-medium">Filters</p>
+                <div className="space-y-3">
+                  <div>
+                    <Sheet open={bulkSheetOpen} onOpenChange={setBulkSheetOpen}>
+                      <SheetTrigger
+                        render={
+                          <Button type="button">
+                            <UsersIcon />
+                            Select Students
+                          </Button>
+                        }
+                      />
+                      <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:!w-[92vw] data-[side=right]:!max-w-5xl">
+                        <SheetHeader className="px-6 py-5">
+                          <SheetTitle>Select Students</SheetTitle>
+                          <SheetDescription>
+                            Filter the student list, then choose who receives this SMS.
+                          </SheetDescription>
+                        </SheetHeader>
+                        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-6 py-4">
+                          <div className="rounded-lg border">
+                            <div className="flex items-center gap-2 border-b px-4 py-2.5">
+                              <FilterIcon className="size-4 text-primary" />
+                              <p className="text-sm font-medium">Filters</p>
+                            </div>
+                            <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-5">
+                              <OptionSelect
+                                label="Class"
+                                name="bulk_class_level"
+                                onChange={setClassLevel}
+                                options={classLevels}
+                                value={classLevel}
+                              />
+                              <OptionSelect
+                                label="Medium"
+                                name="bulk_medium"
+                                onChange={setMedium}
+                                options={mediums}
+                                value={medium}
+                              />
+                              <OptionSelect
+                                label="Group"
+                                name="bulk_group_name"
+                                onChange={setGroupName}
+                                options={groups}
+                                value={groupName}
+                              />
+                              <OptionSelect
+                                label="Batch"
+                                name="bulk_batch"
+                                onChange={setBatchId}
+                                options={batches.map((batch) => ({
+                                  label: batch.name,
+                                  value: batch.id,
+                                }))}
+                                value={batchId}
+                              />
+                              <OptionSelect
+                                label="Tags"
+                                name="bulk_tag"
+                                onChange={setTag}
+                                options={tags}
+                                value={tag}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="text-sm text-muted-foreground">
+                              {filteredBulkStudents.length.toLocaleString("en-US")} shown,
+                              {" "}
+                              {selectedBulkCount.toLocaleString("en-US")} selected
+                            </div>
+                            <Button
+                              disabled={filteredBulkStudents.length === 0}
+                              onClick={toggleVisibleBulkStudents}
+                              type="button"
+                              variant="outline"
+                            >
+                              {filteredBulkStudents.length > 0 &&
+                              filteredBulkStudents.every((student) =>
+                                selectedBulkStudentIds.has(student.id)
+                              )
+                                ? "Unselect shown"
+                                : "Select shown"}
+                            </Button>
+                          </div>
+
+                          <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border">
+                            {filteredBulkStudents.length > 0 ? (
+                              filteredBulkStudents.map((student) => {
+                                const checked = selectedBulkStudentIds.has(student.id)
+
+                                return (
+                                  <button
+                                    aria-pressed={checked}
+                                    className={`grid w-full cursor-pointer grid-cols-[auto_1fr] items-start gap-3 border-b px-4 py-3 text-left last:border-b-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                                      checked
+                                        ? "bg-primary/10"
+                                        : "bg-background hover:bg-muted/50"
+                                    }`}
+                                    key={student.id}
+                                    onClick={() => toggleBulkStudent(student.id)}
+                                    type="button"
+                                  >
+                                    <Checkbox
+                                      aria-hidden="true"
+                                      checked={checked}
+                                      tabIndex={-1}
+                                      className="pointer-events-none mt-0.5"
+                                    />
+                                    <span className="grid gap-1">
+                                      <span className="flex items-center justify-between gap-3">
+                                        <span className="truncate text-sm font-semibold">
+                                          {student.name}
+                                        </span>
+                                        <span className="shrink-0 text-xs text-muted-foreground">
+                                          {student.class_level ?? "No class"}
+                                        </span>
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {[student.phone, student.guardian_phone]
+                                          .filter(Boolean)
+                                          .join(" · ") || "No phone saved"}
+                                      </span>
+                                    </span>
+                                  </button>
+                                )
+                              })
+                            ) : (
+                              <div className="flex h-full min-h-48 items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                                No students match these filters.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <SheetFooter className="border-t bg-muted/20 px-6 py-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-muted-foreground">
+                              {selectedBulkCount.toLocaleString("en-US")} student
+                              {selectedBulkCount === 1 ? "" : "s"} selected
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                disabled={selectedBulkCount === 0}
+                                onClick={() => setSelectedBulkStudentIds(new Set())}
+                                type="button"
+                                variant="outline"
+                              >
+                                Clear
+                              </Button>
+                              <Button
+                                onClick={() => setBulkSheetOpen(false)}
+                                type="button"
+                              >
+                                Done
+                              </Button>
+                            </div>
+                          </div>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
                   </div>
-                  <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <OptionSelect label="Class" options={classLevels} />
-                    <OptionSelect label="Medium" options={mediums} />
-                    <OptionSelect label="Group" options={groups} />
-                    <OptionSelect
-                      label="Batch"
-                      options={batches.map((batch) => batch.name)}
-                    />
-                    <OptionSelect label="Tags" options={tags} />
-                    <OptionSelect
-                      label="Status"
-                      options={["Active", "Archived"]}
-                    />
-                  </div>
+                  {selectedBulkStudents.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedBulkStudents.slice(0, 6).map((student) => (
+                        <Badge key={student.id} variant="outline">
+                          {student.name}
+                        </Badge>
+                      ))}
+                      {selectedBulkStudents.length > 6 ? (
+                        <Badge variant="secondary">
+                          +{selectedBulkStudents.length - 6} more
+                        </Badge>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Recipient type">
                   <Select
+                    name="recipient_type"
                     onValueChange={(value) =>
                       setRecipientType((value || "guardian") as RecipientType)
                     }
@@ -287,49 +657,58 @@ export function SmsChannelCompose({
             <CardContent className="space-y-4 pt-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Template">
-                  <Select onValueChange={applyTemplate} value={selectedTemplateId}>
-                    <SelectTrigger className="h-9 w-full">
-                      <SelectValue placeholder="Select template" />
-                    </SelectTrigger>
-                    <SelectContent align="start">
-                      <SelectGroup>
-                        <SelectItem value="none">No template</SelectItem>
-                        {templates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className={nativeSelectClassName}
+                    onChange={(event) => applyTemplate(event.target.value)}
+                    value={selectedTemplateId}
+                  >
+                    <option value="none">No template</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Variable">
-                  <Select onValueChange={insertVariable} value={selectedVariable}>
-                    <SelectTrigger className="h-9 w-full">
-                      <SelectValue placeholder="Insert variable" />
-                    </SelectTrigger>
-                    <SelectContent align="start">
-                      <SelectGroup>
-                        <SelectItem value="none">Select variable</SelectItem>
-                        {messageVariables.map((variable) => (
-                          <SelectItem key={variable} value={variable}>
-                            {variable}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className={nativeSelectClassName}
+                    onChange={(event) => insertVariable(event.target.value)}
+                    value={selectedVariable}
+                  >
+                    <option value="none">Select variable</option>
+                    {messageVariables.map((variable) => (
+                      <option key={variable} value={variable}>
+                        {variable}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
               <Field label="Message">
                 <Textarea
                   className="min-h-40 resize-y"
-                  onChange={(event) => setMessage(event.target.value)}
-                  placeholder="Type your SMS message..."
+                  name="message_body"
+                  onChange={(event) =>
+                    setMessage(
+                      stripLatinLettersOutsideTemplateTokens(event.target.value)
+                    )
+                  }
+                  placeholder="বাংলায় এসএমএস লিখুন..."
                   ref={messageTextareaRef}
                   value={message}
                 />
               </Field>
+              {hasInvalidSmsText ? (
+                <p className="text-sm text-destructive">
+                  SMS message must be written in Bangla only. Variable tokens are allowed.
+                </p>
+              ) : null}
+              {message.trim() && !hasBanglaSmsText ? (
+                <p className="text-sm text-destructive">
+                  SMS message must include Bangla text.
+                </p>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Stat label="Characters" value={messageForCalculation.length} />
                 <Stat label="Type" value={messageType} />
@@ -353,7 +732,8 @@ export function SmsChannelCompose({
               <div className="rounded-xl border bg-muted/20 p-3">
                 <div className="rounded-lg border bg-background p-3 shadow-sm">
                   <p className="min-h-24 whitespace-pre-wrap text-sm leading-6">
-                    {renderedMessage.trim() || "Your SMS preview will appear here."}
+                    {signedPreviewMessage.trim() ||
+                      "Your SMS preview will appear here."}
                   </p>
                 </div>
                 {selectedTemplate ? (
@@ -369,6 +749,10 @@ export function SmsChannelCompose({
                 value={phoneCount.toLocaleString("en-US")}
               />
               <SummaryRow label="Segment size" value={`${segmentSize} chars`} />
+              <SummaryRow
+                label="Characters"
+                value={messageForCalculation.length.toLocaleString("en-US")}
+              />
               <SummaryRow label="Segments / recipient" value={segments} />
               <SummaryRow label="Credits required" value={creditsRequired} />
               <SummaryRow
@@ -382,11 +766,11 @@ export function SmsChannelCompose({
               />
 
               <div className="grid gap-2">
-                <Button disabled={!canSend}>
+                <Button disabled={!canSend} type="submit">
                   <SendIcon />
                   Send Now
                 </Button>
-                <Button disabled={!message.trim()} variant="outline">
+                <Button disabled={!message.trim()} type="button" variant="outline">
                   <FilePlus2Icon />
                   Save as Template
                 </Button>
@@ -416,7 +800,7 @@ export function SmsChannelCompose({
           </Card>
         </div>
       </div>
-    </div>
+    </form>
   )
 }
 
@@ -458,21 +842,42 @@ function ModeButton({
   )
 }
 
-function OptionSelect({ label, options }: { label: string; options: string[] }) {
+function OptionSelect({
+  label,
+  name,
+  onChange,
+  options,
+  value,
+}: {
+  label: string
+  name: string
+  onChange: (value: string) => void
+  options: Array<string | { label: string; value: string }>
+  value: string
+}) {
   return (
     <Field label={label}>
-      <Select defaultValue="all">
+      <Select
+        name={name}
+        onValueChange={(nextValue) => onChange(nextValue ?? "all")}
+        value={value}
+      >
         <SelectTrigger className="h-9 w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="start">
           <SelectGroup>
             <SelectItem value="all">All {label.toLowerCase()}</SelectItem>
-            {options.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
+            {options.map((option) => {
+              const optionValue = typeof option === "string" ? option : option.value
+              const optionLabel = typeof option === "string" ? option : option.label
+
+              return (
+                <SelectItem key={optionValue} value={optionValue}>
+                  {optionLabel}
+                </SelectItem>
+              )
+            })}
           </SelectGroup>
         </SelectContent>
       </Select>
@@ -529,4 +934,15 @@ function renderPreviewMessage(messageBody: string) {
   return messageBody.replace(/\{\{([a-z_]+)\}\}/g, (match, variableName) => {
     return previewVariableValues[variableName] ?? match
   })
+}
+
+function appendSmsSignature(messageBody: string, signature: string | null) {
+  const normalizedMessage = messageBody.trimEnd()
+  const normalizedSignature = signature?.trim()
+
+  if (!normalizedSignature) {
+    return normalizedMessage
+  }
+
+  return `${normalizedMessage}\n${normalizedSignature}`
 }

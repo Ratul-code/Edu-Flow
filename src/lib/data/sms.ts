@@ -257,6 +257,24 @@ export async function listSmsTemplates(tenantId: string) {
   return data as SmsTemplateRecord[]
 }
 
+export async function listAllSmsTemplates(tenantId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("sms_templates")
+    .select("id, tenant_id, name, category, message_body, is_active, is_default")
+    .eq("tenant_id", tenantId)
+    .order("is_active", { ascending: false })
+    .order("category", { ascending: true })
+    .order("is_default", { ascending: false })
+    .order("name", { ascending: true })
+
+  if (error || !data) {
+    return []
+  }
+
+  return data as SmsTemplateRecord[]
+}
+
 export async function getTenantSmsSettings(tenantId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase

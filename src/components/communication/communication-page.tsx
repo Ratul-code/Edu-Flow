@@ -712,7 +712,7 @@ function CommOverview() {
                 {
                   label: "New Message",
                   icon: MegaphoneIcon,
-                  href: "/notifications/message-history",
+                  href: "/communication/logs",
                 },
                 {
                   label: "Send SMS",
@@ -757,7 +757,7 @@ function CommOverview() {
                 </div>
                 <Button
                   className="h-7 gap-1 text-xs text-primary"
-                  render={<Link href="/notifications/message-history" />}
+                  render={<Link href="/communication/logs" />}
                   size="sm"
                   variant="ghost"
                 >

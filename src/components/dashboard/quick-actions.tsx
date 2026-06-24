@@ -1,10 +1,8 @@
 import {
-  BellIcon,
   BookOpenIcon,
   ReceiptTextIcon,
   UserPlusIcon,
 } from "lucide-react"
-import Link from "next/link"
 
 import { createBatch } from "@/lib/actions/batches"
 import { recordStudentPaymentFromDashboard } from "@/lib/actions/fees"
@@ -62,12 +60,6 @@ const actions = [
     tone: "text-muted-foreground",
     type: "payment",
   },
-  {
-    icon: BellIcon,
-    title: "Notifications",
-    tone: "text-muted-foreground",
-    type: "notification",
-  },
 ] as const
 
 export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
@@ -86,20 +78,6 @@ export function QuickActions({ batches, dueLedgers }: QuickActionsProps) {
               triggerClassName="h-auto flex-col gap-2 py-3 text-xs font-medium"
               triggerVariant="outline"
             />
-          )
-        }
-
-        if (action.type === "notification") {
-          return (
-            <Button
-              className="h-auto flex-col gap-2 py-3 text-xs font-medium"
-              key={action.type}
-              render={<Link href="/notifications" />}
-              variant="outline"
-            >
-              <Icon className={`size-4 ${action.tone}`} />
-              {action.title}
-            </Button>
           )
         }
 

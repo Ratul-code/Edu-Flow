@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react"
 
 import { PageHeader } from "@/components/app/page-header"
+import { BanglaSmsTextarea } from "@/components/communication/bangla-sms-textarea"
 import {
   AutoSaveToggle,
   DirtyForm,
@@ -57,6 +58,9 @@ const recipientLabels: Record<SmsRecipientType, string> = {
   guardian: "Guardian",
   student: "Student",
 }
+
+const nativeSelectClassName =
+  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
 
 export default async function CommunicationSettingsPage() {
   const admin = await requireAdminContext()
@@ -165,25 +169,22 @@ export default async function CommunicationSettingsPage() {
           <form action={createSmsRechargeRequest}>
             <CardContent className="space-y-4 pt-5">
               <Field label="Credit package">
-                <Select
+                <select
+                  className={nativeSelectClassName}
                   defaultValue={packages[0]?.id ?? ""}
                   disabled={packages.length === 0}
                   name="package_id"
                 >
-                  <SelectTrigger className="h-9 w-full">
-                    <SelectValue placeholder="Select package" />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    <SelectGroup>
-                      {packages.map((creditPackage) => (
-                        <SelectItem key={creditPackage.id} value={creditPackage.id}>
-                          {creditPackage.name} · {creditPackage.credits} credits ·{" "}
-                          {formatTaka(creditPackage.price)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  {packages.length === 0 ? (
+                    <option value="">No active packages</option>
+                  ) : null}
+                  {packages.map((creditPackage) => (
+                    <option key={creditPackage.id} value={creditPackage.id}>
+                      {creditPackage.name} · {creditPackage.credits} credits ·{" "}
+                      {formatTaka(creditPackage.price)}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Payment method">
@@ -372,7 +373,7 @@ export default async function CommunicationSettingsPage() {
           </CardHeader>
           <CardContent className="pt-5">
             <Field label="Signature text">
-              <Textarea
+              <BanglaSmsTextarea
                 className="min-h-24"
                 defaultValue={settings.sms_signature ?? ""}
                 maxLength={160}
@@ -499,21 +500,18 @@ function TemplateSelect({
   templates: SmsTemplateRecord[]
 }) {
   return (
-    <Select defaultValue={defaultValue} name={name}>
-      <SelectTrigger className="h-9 w-full">
-        <SelectValue placeholder="No template selected" />
-      </SelectTrigger>
-      <SelectContent align="start">
-        <SelectGroup>
-          <SelectItem value="none">No template</SelectItem>
-          {templates.map((template) => (
-            <SelectItem key={template.id} value={template.id}>
-              {template.name}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    <select
+      className={nativeSelectClassName}
+      defaultValue={defaultValue}
+      name={name}
+    >
+      <option value="none">No template</option>
+      {templates.map((template) => (
+        <option key={template.id} value={template.id}>
+          {template.name}
+        </option>
+      ))}
+    </select>
   )
 }
 
