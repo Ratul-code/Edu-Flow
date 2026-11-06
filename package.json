@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:setup": "node scripts/setup-local-db.mjs",
+    "db:reset": "node scripts/setup-local-db.mjs --reset-schema",
+    "db:backup": "node scripts/backup-project-data.mjs",
+    "db:wipe": "node scripts/wipe-data.mjs",
+    "db:list-users": "node scripts/list-auth-users.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

@@ -15,6 +15,22 @@ Reference files:
 - `src/components/app/topbar.tsx`
 - `src/lib/auth/user.ts`
 
+### Public auth shell
+
+Routes under `src/app/(auth)` render inside a shared layout that centres a
+narrow column on a muted background. The layout is presentational only: it does
+not call `requireAdminContext()`, because these routes are reachable without a
+session.
+
+The `(auth)` group holds `login`, `signup`, and `onboarding`.
+
+Reference files:
+
+- `src/app/(auth)/layout.tsx`
+- `src/app/(auth)/login/page.tsx`
+- `src/app/(auth)/signup/page.tsx`
+- `src/app/(auth)/onboarding/page.tsx`
+
 ### Authenticated server page
 
 Pages under `src/app/(app)` are async Server Components. They call `requireAdminContext()`, await promised `searchParams` or `params`, fetch tenant-scoped data, and compose domain components.
@@ -245,6 +261,73 @@ Reference files:
 - `supabase/functions/generate-monthly-ledgers/index.ts`
 - `supabase/cron/generate-monthly-ledgers.sql`
 
+### Signup and tenant provisioning
+
+A centre is created through the `provision_tenant(...)` Postgres function
+rather than a sequence of inserts from the app. The action creates the auth
+account first, then calls the function.
+
+`provision_tenant` is `security definer` so it can insert the `admin_users`
+row, which RLS otherwise blocks for an account that has no tenant yet. It is
+idempotent on the auth user id, so a double-submit or an onboarding retry
+returns the existing centre instead of creating a second one.
+
+The action returns `FormState` on validation failure and redirects on success.
+If the auth account is created but provisioning fails, the action redirects to
+`/onboarding` so the user can retry instead of hitting a dead end.
+
+#### Multi-step forms must keep every step mounted
+
+The signup wizard is one `<form>` that submits all its fields at once. A step
+that unmounts when the user advances takes its inputs out of the DOM, so their
+values never reach the action and the schema fails on missing fields.
+
+Every step therefore stays mounted and is hidden with the Tailwind `hidden`
+class (`display: none`). Do not use the `inert` attribute for this: inert
+subtrees are excluded from form submission, which drops exactly the hidden
+fields the pattern depends on.
+
+The form also carries `noValidate`, because a `required` attribute on a hidden
+step's input would otherwise block submission before the action ever runs.
+
+On a validation failure the action reports which step owns the failing field
+(`stepForErrors` in `src/lib/auth/signup.ts`), so the user is returned to the
+step that failed rather than always to step 1. The client keeps that
+server-reported step separate from the local step so later keystrokes do not
+yank the user back.
+
+Reference files:
+
+- `src/lib/auth/signup.ts`
+- `src/components/auth/signup-form.tsx`
+- `src/components/auth/onboarding-form.tsx`
+- `supabase/migrations/0021_provision_tenant.sql`
+
+### No-tenant onboarding state
+
+A signed-in user with no `admin_users` row is not an error. `requireAdminContext()`
+redirects them to `/onboarding`, which shows the centre setup form and calls
+the same `provision_tenant` function. The page redirects to the dashboard when
+the user already belongs to a centre.
+
+Reference files:
+
+- `src/lib/auth/user.ts`
+- `src/app/(auth)/onboarding/page.tsx`
+
+### Subscription mutations
+
+Plan changes go through the `change_tenant_plan(...)` function, which cancels
+the previous subscription, creates the new one, and raises a payment request
+when the plan is paid. Payment approval goes through
+`approve_subscription_payment_request(...)`.
+
+Reference files:
+
+- `src/lib/actions/billing.ts`
+- `src/components/settings/billing-settings.tsx`
+- `supabase/migrations/0021_provision_tenant.sql`
+
 ## Data Fetching Patterns
 
 ### Data module per domain
@@ -259,6 +342,21 @@ Reference files:
 - `src/lib/data/fees.ts`
 - `src/lib/data/salaries.ts`
 - `src/lib/data/payment-receipts.ts`
+
+### Shared types and helpers
+
+When a domain module mixes server-only Supabase reads with helpers that client
+components need, split it. The server module is marked `import "server-only"`;
+the shared module holds the types, label maps, and formatting helpers.
+
+Importing a module that reaches `next/headers` into a client component breaks
+the build, so the split is required, not stylistic.
+
+Reference files:
+
+- `src/lib/billing/plans.ts` (server-only data access)
+- `src/lib/billing/types.ts` (shared types and helpers)
+- `src/components/settings/billing-settings.tsx` (client consumer)
 - `src/lib/data/salary-receipts.ts`
 
 ### Cached route data

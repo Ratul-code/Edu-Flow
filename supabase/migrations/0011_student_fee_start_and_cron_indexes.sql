@@ -10,7 +10,12 @@ where fee_start_month is null;
 
 alter table public.students
   alter column fee_start_month set not null,
-  alter column fee_start_month set default date_trunc('month', current_date)::date,
+  alter column fee_start_month set default date_trunc('month', current_date)::date;
+
+alter table public.students
+  drop constraint if exists students_fee_start_month_is_month_start;
+
+alter table public.students
   add constraint students_fee_start_month_is_month_start
     check (fee_start_month = date_trunc('month', fee_start_month)::date);
 

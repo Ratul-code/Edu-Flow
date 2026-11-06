@@ -1,16 +1,10 @@
 import { PageHeader } from "@/components/app/page-header"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { requireAdminContext } from "@/lib/auth/user"
 import { checkClassLevelsTableExists, listClassLevels } from "@/lib/data/class-levels"
 import { ClassLevelsManager } from "@/components/settings/class-levels-manager"
 import { BillingSettingsForm } from "@/components/settings/billing-settings-form"
+import { BillingSettings } from "@/components/settings/billing-settings"
 import { getBillingSettings } from "@/lib/data/fees"
 import { CenterProfileCard } from "@/components/settings/center-profile-card"
 import { listAcademicGroups } from "@/lib/data/academic-groups"
@@ -23,19 +17,37 @@ import {
   checkMediumOptionsTableExists,
   listMediumOptions,
 } from "@/lib/data/medium-options"
+import {
+  getPlanCatalog,
+  getSubscriptionPaymentRequests,
+  getTenantSubscription,
+} from "@/lib/billing/plans"
 
 export default async function SettingsPage() {
   const admin = await requireAdminContext()
 
   const tableExists = await checkClassLevelsTableExists()
   const mediumOptionsTableExists = await checkMediumOptionsTableExists()
-  const [tenant, billingSettings, teacherPaymentSettings, classLevels, academicGroups, mediums] = await Promise.all([
+  const [
+    tenant,
+    billingSettings,
+    teacherPaymentSettings,
+    classLevels,
+    academicGroups,
+    mediums,
+    plans,
+    subscription,
+    paymentRequests,
+  ] = await Promise.all([
     getTenantProfile(admin.tenantId),
     getBillingSettings(admin.tenantId),
     getTeacherPaymentSettings(admin.tenantId),
     tableExists ? listClassLevels(admin.tenantId) : Promise.resolve([]),
     listAcademicGroups(admin.tenantId),
     listMediumOptions(admin.tenantId),
+    getPlanCatalog(),
+    getTenantSubscription(admin.tenantId),
+    getSubscriptionPaymentRequests(admin.tenantId),
   ])
   const tenantProfile = {
     address: tenant?.address ?? null,
@@ -68,25 +80,11 @@ export default async function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="billing">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="gap-1">
-                <CardTitle className="text-sm">Subscription</CardTitle>
-                <CardDescription className="text-xs">
-                  Current billing status for this tenant workspace.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Detail label="Tenant" value={tenantProfile.name} />
-                <Detail
-                  label="Subscription status"
-                  value={formatSubscriptionStatus(
-                    tenant?.subscription_status ?? admin.tenantStatus
-                  )}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <BillingSettings
+            subscription={subscription}
+            plans={plans}
+            paymentRequests={paymentRequests}
+          />
         </TabsContent>
 
         <TabsContent value="taxonomy">
@@ -107,23 +105,6 @@ export default async function SettingsPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-  )
-}
-
-function formatSubscriptionStatus(value: string) {
-  return value
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
-    .join(" ") || "Not configured"
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border px-3 py-2">
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm font-medium">{value}</div>
     </div>
   )
 }

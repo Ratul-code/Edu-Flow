@@ -13,8 +13,12 @@ create table if not exists public.billing_settings (
   unique (tenant_id)
 );
 
+-- Seed values must satisfy the tighter 1-15 check constraints that
+-- migration 0009 introduces, otherwise re-running the migration against a
+-- database where 0009 has already applied fails on this insert. 0009 rewrites
+-- these values to 1/7 for pre-existing rows anyway.
 insert into public.billing_settings (tenant_id, payment_start_day, grace_period_days)
-select id, 25, 10
+select id, least(greatest(25, 1), 15), least(greatest(10, 0), 15)
 from public.tenants
 on conflict (tenant_id) do nothing;
 

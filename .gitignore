@@ -40,3 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase cli
+supabase/.temp
+supabase/.branches
+supabase/.env
+
+# local data backups (may contain credentials/secrets)
+supabase-backup-*.json
+
+# supabase management access token
+.supabase-token

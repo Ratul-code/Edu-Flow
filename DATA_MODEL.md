@@ -13,6 +13,8 @@ Edu Flow is tenant-scoped. A tenant represents one coaching centre workspace.
 - Application tables store `tenant_id` and are isolated by row level security.
 - The helper `current_admin_tenant_id()` resolves the active admin tenant from the authenticated Supabase user.
 - Most business tables use tenant-scoped uniqueness so records from different centres cannot collide.
+- A centre is created either by an admin manually or through the signup flow,
+  which calls `provision_tenant()`. See "Tenant Provisioning" below.
 
 ## Core Entities
 
@@ -260,9 +262,107 @@ Business rules:
 - `communication_messages` stores aggregate counts and credit totals.
 - `communication_recipients` stores the final rendered message body and per-recipient delivery state.
 
+## Subscription Model
+
+This section covers the SaaS subscription a coaching centre pays for to use
+Edu Flow. It is separate from the tuition-fee collection tables above, which
+move money between guardians and the centre.
+
+### Plan Definitions
+
+`plan_definitions` is a global catalog of the available plans. It is not
+tenant-scoped: every centre reads the same list.
+
+- `code` uniquely identifies a plan (`free`, `standard`, `premium`).
+- `price` is the monthly price in BDT. The free plan has a price of `0`.
+- `limits` is a jsonb map of feature limits keyed by feature name, for example
+  `{"student_limit": 30, "teacher_limit": 5}`.
+- `features` is a jsonb array of human-readable feature labels.
+- `is_default` marks the plan used when no plan is specified. A partial unique
+  index enforces that at most one plan is the default.
+- Only one plan may be `is_active` per code. Active plans are readable by
+  anonymous visitors so the pricing screen renders before signup.
+
+Table naming note: this project shares a Supabase instance with another
+product that already uses `plans` and `subscriptions`. Edu Flow's own tables
+use `plan_definitions` and `tenant_subscriptions` to avoid the clash.
+
+Foreign key note: declare a foreign key either inline on the column or as a
+table-level constraint, never both. Declaring both creates two separate
+constraints on the same column, and PostgREST then reports two relationships
+between the two tables. Embedded selects fail with "Could not embed because
+more than one relationship was found". Migration `0022` cleans up the
+duplicates that migration `0020` created.
+
+### Tenant Subscriptions
+
+`tenant_subscriptions` records which plan a tenant is on.
+
+- A tenant has at most one non-terminal subscription, enforced by the partial
+  unique index `tenant_subscriptions_active_idx`.
+- `status` is one of `trialing`, `pending_payment`, `active`, `past_due`,
+  `cancelled`, or `expired`.
+- The free plan activates immediately on creation. Paid plans start in
+  `pending_payment` and become `active` once the payment request is approved.
+- `current_period_start` and `current_period_end` are null while payment is
+  pending.
+
+`tenants.subscription_status` is a denormalised summary of the current
+subscription, kept in sync by the `sync_tenant_subscription_status()` trigger.
+The trigger maps `trialing` and `pending_payment` to `trial`, `active` to
+`active`, `past_due` to `past_due`, `expired` to `suspended`, and `cancelled`
+to `cancelled`.
+
+### Subscription Payment Requests
+
+`subscription_payment_requests` records a tenant's payment for a plan. It
+follows the same manual-approval shape as `sms_recharge_requests`: a tenant
+submits the transaction, and the platform approves or rejects it.
+
+- `payment_method` is one of `bkash`, `nagad`, `bank`, `cash`, or `other`.
+- `status` is one of `pending`, `approved`, `rejected`, or `cancelled`.
+- Approving or rejecting records the acting admin and timestamp.
+
+### Subscription Events
+
+`subscription_events` is an append-only audit trail of subscription changes:
+`subscription_created`, `plan_changed`, `payment_requested`,
+`payment_approved`, `payment_rejected`, `subscription_cancelled`,
+`subscription_expired`, and `renewed`.
+
+### Plan Limits
+
+`current_plan_limit(tenant_id, feature_key)` returns the limit for a feature
+from the tenant's current plan. It returns `-1` when the tenant has no
+subscription (no limit) and `0` when the feature is not included in the plan.
+
+### Tenant Provisioning
+
+`provision_tenant(...)` creates a coaching centre for a signed-up account. It
+is a `security definer` function because:
+
+- The `admin_users` insert policy is keyed on `current_admin_tenant_id()`,
+  which is null for a new account with no tenant yet, so an ordinary
+  authenticated insert would be rejected.
+- Creating a centre touches several tables and must succeed or fail as one
+  transaction.
+
+The function is idempotent on the auth user id: calling it again for an
+account that already owns a centre returns the existing tenant instead of
+creating a second one. It rejects a request to provision a centre for a
+different user id than the caller.
+
+Alongside the tenant and admin link it creates the per-tenant option rows a
+centre needs: `billing_settings`, `class_levels`, `academic_groups`,
+`medium_options`, and the SMS wallet. The SMS templates and settings are
+created by the `initialize_sms_resources_for_tenant()` trigger on `tenants`.
+
 ## Isolation And Integrity
 
 - Row level security is enabled for tenant business tables.
 - Tenant policies restrict authenticated admins to their active tenant.
 - Most relationships include tenant-aware foreign keys or tenant-scoped uniqueness.
 - Shared update timestamp triggers keep records timestamped consistently.
+- The plan catalog is global reference data and is readable by anonymous
+  visitors; subscription and payment tables are tenant-scoped like the rest of
+  the business tables.

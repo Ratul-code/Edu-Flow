@@ -10,13 +10,21 @@ import {
 const authRoute = "/login"
 const appHome = "/dashboard"
 
+// Routes a signed-out visitor may reach. A signed-in visitor is redirected
+// away from these to the app.
+const publicRoutes = ["/login", "/signup", "/pricing"]
+
+const onboardingRoute = "/onboarding"
+
+const isPublicRoute = (pathname: string) =>
+  publicRoutes.some((route) => pathname === route)
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
-  const isLoginRoute = pathname === authRoute
   const isRootRoute = pathname === "/"
 
   if (!hasSupabaseEnv) {
-    if (isLoginRoute || isRootRoute) {
+    if (isPublicRoute(pathname) || isRootRoute) {
       return NextResponse.next()
     }
 
@@ -52,11 +60,19 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (user && (isLoginRoute || isRootRoute)) {
+  if (user && (isPublicRoute(pathname) || isRootRoute)) {
+    // A signed-in user on the onboarding route may still need to create a
+    // centre, so that route is not bounced away here.
     return NextResponse.redirect(new URL(appHome, request.url))
   }
 
-  if (!user && !isLoginRoute) {
+  if (!user && !isPublicRoute(pathname)) {
+    // Onboarding requires a session. Send a signed-out visitor to the login
+    // page instead, keeping the intended destination.
+    if (pathname === onboardingRoute) {
+      return redirectToLogin(request)
+    }
+
     return redirectToLogin(request, `${pathname}${search}`)
   }
 

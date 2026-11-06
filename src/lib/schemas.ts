@@ -119,6 +119,82 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required."),
 });
 
+export const signupSchema = z
+  .object({
+    admin_name: requiredText("Your name", 100, "Your name is too long."),
+    admin_phone: optionalText(20, "Phone number is too long."),
+    center_name: requiredText(
+      "Center name",
+      160,
+      "Center name is too long."
+    ),
+    address: requiredText("Address", 320, "Address is too long."),
+    contact_phone: requiredText(
+      "Contact phone",
+      40,
+      "Contact phone is too long."
+    ),
+    email: z
+      .string()
+      .trim()
+      .min(1, "Email is required.")
+      .email("Enter a valid email address."),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters.")
+      .max(72, "Password must be 72 characters or fewer."),
+    confirm_password: z.string().min(1, "Confirm your password."),
+    plan_code: z
+      .string()
+      .trim()
+      .min(1, "Select a plan.")
+      .max(40, "Select a valid plan."),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    path: ["confirm_password"],
+    message: "Passwords do not match.",
+  });
+
+export type SignupFormData = z.infer<typeof signupSchema>;
+
+// The onboarding form is the same as signup minus the account fields: the
+// account already exists by the time a user reaches it.
+export const tenantOnboardingSchema = z.object({
+  admin_name: requiredText("Your name", 100, "Your name is too long."),
+  admin_phone: optionalText(20, "Phone number is too long."),
+  center_name: requiredText(
+    "Center name",
+    160,
+    "Center name is too long."
+  ),
+  address: requiredText("Address", 320, "Address is too long."),
+  contact_phone: requiredText(
+    "Contact phone",
+    40,
+    "Contact phone is too long."
+  ),
+  plan_code: z
+    .string()
+    .trim()
+    .min(1, "Select a plan.")
+    .max(40, "Select a valid plan."),
+});
+
+export type TenantOnboardingFormData = z.infer<typeof tenantOnboardingSchema>;
+
+export const planChangeSchema = z.object({
+  plan_code: z
+    .string()
+    .trim()
+    .min(1, "Select a plan.")
+    .max(40, "Select a valid plan."),
+  payment_method: z.enum(["bkash", "nagad", "bank", "cash", "other"], {
+    error: "Select a payment method.",
+  }),
+  transaction_id: optionalText(120, "Transaction ID is too long."),
+  payment_note: optionalText(500, "Payment note is too long."),
+});
+
 export const studentSchema = z.object({
   name: z
     .string()

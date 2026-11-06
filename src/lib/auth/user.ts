@@ -88,15 +88,38 @@ export async function requireAdminContext() {
   const admin = await getAdminContext(user)
 
   if (!admin) {
-    redirect(
-      `/login?error=${encodeURIComponent(
-        "This user is not linked to an active Edu Flow tenant."
-      )}`
-    )
+    // Signed in, but not linked to a centre yet. Send the user to onboarding
+    // so they can create one instead of bouncing them back to the login page.
+    redirect("/onboarding")
   }
 
   return admin
 }
+
+/**
+ * Whether the signed-in user already belongs to an active centre.
+ *
+ * Used by the onboarding page to decide between showing the centre setup form
+ * and redirecting to the dashboard.
+ */
+export const hasTenantMembership = cache(async function hasTenantMembership() {
+  const user = await getAuthenticatedUser()
+
+  if (!user) {
+    return false
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .eq("role", "admin")
+    .eq("status", "active")
+    .maybeSingle()
+
+  return !error && !!data
+})
 
 export function resolveAdminContext(user: User): AdminContext {
   const metadata = user.user_metadata ?? {}

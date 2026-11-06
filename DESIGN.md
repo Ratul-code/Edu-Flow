@@ -86,8 +86,17 @@ Reference files:
 - Settings use line-style tabs under the page header: General, Billing, Academic Setup, and Salary Setting.
 - Tab lists are full-width with a bottom border, square tab triggers, and a primary underline for the selected tab.
 - Settings cards follow the `ui-reference` density: `text-sm` titles, `text-xs` descriptions, compact controls, and `gap-4` responsive grids.
-- General contains the center profile form only. Billing contains tenant subscription status. Academic Setup uses three reference-style taxonomy cards. Salary Setting contains Student Payment and Teacher Payment settings.
+- General contains the center profile form only. Billing contains the current plan, its feature limits, the plan change form, and the payment request history. Academic Setup uses three reference-style taxonomy cards. Salary Setting contains Student Payment and Teacher Payment settings.
 - Keep settings content operational. Do not copy mock account, payment-method, notification, or switch behavior unless the real app supports it.
+
+### Auth Pages
+
+- Auth routes render inside a shared centred column: a brand mark, the title, and the card stack on a muted background.
+- The login page offers two distinct entry points, not one combined form: sign in to an existing centre, and start a new centre. They are separated by a divider so the choice is explicit.
+- Signup is a three-step wizard in a single page (Account, Centre, Plan) rather than three routes. The centre and its plan are created in one transaction, so a multi-route wizard would lose state between steps.
+- The plan step shows the plans as selectable cards with the price, feature list, and limits visible, so the choice is informed before submitting.
+- Payment details appear only when a paid plan is selected. Paid plans do not charge at signup: the centre is created immediately and the plan activates once the payment is approved.
+- Keep auth pages free of marketing heroes and oversized cards. This is a working product, not a landing page.
 
 ### List Pages
 
