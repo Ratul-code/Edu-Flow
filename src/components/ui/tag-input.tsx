@@ -19,15 +19,36 @@ export function TagInput({
   const [inputValue, setInputValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Split typed text on commas so "Math, Physics" becomes two tags. The
+  // stored field is a comma-separated string, so users naturally type commas.
+  const addTags = (raw: string) => {
+    const parts = raw
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+
+    if (parts.length === 0) {
+      return
+    }
+
+    setTags((current) => {
+      const next = [...current]
+
+      for (const part of parts) {
+        if (!next.includes(part)) {
+          next.push(part)
+        }
+      }
+
+      return next
+    })
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // Check for Space or Enter keys
     if (e.key === " " || e.key === "Enter") {
       e.preventDefault()
-      const trimmed = inputValue.trim()
-
-      if (trimmed && !tags.includes(trimmed)) {
-        setTags([...tags, trimmed])
-      }
+      addTags(inputValue)
       setInputValue("")
     } else if (e.key === "Backspace" && !inputValue && tags.length > 0) {
       // Remove last tag on Backspace if input is empty
@@ -40,15 +61,43 @@ export function TagInput({
     setTags(tags.filter((t) => t !== tagToRemove))
   }
 
+  // Commit whatever is still typed when focus leaves the input. Without this,
+  // a subject typed and then submitted by clicking the button (rather than
+  // pressing Space) is dropped, and the form submits an empty value.
+  const commitPendingValue = () => {
+    addTags(inputValue)
+    setInputValue("")
+  }
+
   // Auto-focus input when clicking container
   const handleContainerClick = () => {
     inputRef.current?.focus()
   }
 
+  // The submitted value includes any text still being typed, so a subject
+  // that was never committed with Space is not lost when the form is
+  // submitted directly.
+  const submittedValue = (() => {
+    const pending = inputValue
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+
+    const next = [...tags]
+
+    for (const part of pending) {
+      if (!next.includes(part)) {
+        next.push(part)
+      }
+    }
+
+    return next.join(",")
+  })()
+
   return (
     <div className="flex flex-col gap-1">
       {/* Hidden input that submits tag data as comma-separated string */}
-      <input type="hidden" name={name} value={tags.join(",")} />
+      <input type="hidden" name={name} value={submittedValue} />
 
       <div
         onClick={handleContainerClick}
@@ -79,6 +128,7 @@ export function TagInput({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          onBlur={commitPendingValue}
           placeholder={tags.length === 0 ? placeholder : ""}
           className="flex-1 min-w-[120px] bg-transparent border-0 outline-none text-sm p-0 focus:ring-0"
         />
